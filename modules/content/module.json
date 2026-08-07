@@ -1,0 +1,30 @@
+{
+  "name": "@beyondx/module-content",
+  "displayName": "CMS and Content",
+  "version": "0.3.0",
+  "description": "Content types, entries, revisions, localization, SEO, relations and publishing workflows",
+  "dependencies": ["@beyondx/module-foundation", "@beyondx/module-identity"],
+  "optionalDependencies": [],
+  "permissions": [
+    "content.types.read",
+    "content.types.create",
+    "content.types.update",
+    "content.types.delete",
+    "content.entries.read",
+    "content.entries.create",
+    "content.entries.update",
+    "content.entries.delete",
+    "content.entries.publish",
+    "content.entries.archive",
+    "content.revisions.read"
+  ],
+  "capabilities": [
+    "content.types",
+    "content.entries",
+    "content.revisions",
+    "content.localization",
+    "content.seo",
+    "content.relations",
+    "content.scheduling"
+  ]
+}

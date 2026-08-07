@@ -8,3 +8,7 @@ Business capabilities live in independent workspace packages under this director
 - `@beyondx/module-identity` — authentication, users, RBAC, sessions, recovery and audit from Phase 1.
 
 Every module contains a package manifest, `module.json`, TypeScript configuration, layered source code and real tests.
+
+## Phase 2 module
+
+`@beyondx/module-content` owns CMS domain logic, persistence adapters, permissions, routes, revisions and scheduled publishing. `apps/api` only registers the module; `apps/admin` only consumes its HTTP API.

@@ -1,6 +1,6 @@
 {
   "name": "beyondx",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": true,
   "description": "BeyondX modular digital product platform",
   "packageManager": "pnpm@10.15.0",
@@ -27,7 +27,8 @@
     "db:studio": "dotenv -e .env -- pnpm --filter @beyondx/database studio",
     "verify:phase0": "node scripts/verify-phase0.mjs",
     "prepare": "node scripts/setup-husky.mjs",
-    "verify:phase1": "pnpm verify:phase0 && node scripts/verify-phase1.mjs"
+    "verify:phase1": "pnpm verify:phase0 && node scripts/verify-phase1.mjs",
+    "verify:phase2": "pnpm verify:phase1 && node scripts/verify-phase2.mjs"
   },
   "devDependencies": {
     "@types/node": "22.18.0",

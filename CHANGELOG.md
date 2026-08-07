@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.3.0 — Phase 2 CMS and Content
+
+- Added modular `@beyondx/module-content` CMS.
+- Added ContentType, FieldDefinition, ContentEntry, ContentRevision and EntryRelation persistence.
+- Added Draft / Published / Archived lifecycle and revision history.
+- Added locale, slug and SEO metadata support.
+- Added entry relations and scheduled publishing.
+- Added protected CMS administration APIs and public published-content APIs.
+- Added CMS RBAC permissions and idempotent seed updates.
+- Added mobile-first Content and Content Types Admin pages.
+- Converted the Admin shell to mobile-first off-canvas navigation.
+- Added mobile card layouts for users, sessions and audit history.
+- Added Phase 2 migration, tests and `verify:phase2`.
+
+
 ## 0.2.0 — Phase 1 Identity and Access Management
 
 ### Added
@@ -97,3 +112,6 @@ All notable BeyondX changes are documented here.
 ### Architecture notes
 
 - Monitoring remains a future independent module with a separate panel. Phase 0 exposes only reusable health and module lifecycle foundations required by it.
+## 0.2.1 - Phase 1 lint correction
+
+- Changed Admin authentication context operations from method signatures to function-property signatures to satisfy `@typescript-eslint/unbound-method` without disabling the rule.

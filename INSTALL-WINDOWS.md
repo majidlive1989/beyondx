@@ -70,3 +70,18 @@ For separate terminals:
 pnpm exec dotenv -e .env -- pnpm --filter @beyondx/api dev
 pnpm exec dotenv -e .env -- pnpm --filter @beyondx/admin dev
 ```
+
+
+## Phase 2 upgrade
+
+Phase 2 introduces new Prisma models, so database generation and migration are required once after extracting/upgrading:
+
+```powershell
+pnpm install --no-frozen-lockfile
+pnpm db:generate
+pnpm db:migrate
+pnpm db:seed
+pnpm verify:phase2
+```
+
+CMS Admin: `http://127.0.0.1:3000/content` and `http://127.0.0.1:3000/content-types`.

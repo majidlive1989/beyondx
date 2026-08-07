@@ -105,15 +105,15 @@ const environment = {
   PASSWORD_SALT_ROUNDS: "10",
 };
 
-describe("Phase 1 database seed", () => {
+describe("Phase 2 database seed", () => {
   it("is idempotent across repeated runs", async () => {
     const { client, state } = createSeedClient();
 
     await seedDatabase(client, environment);
     await seedDatabase(client, environment);
 
-    expect(state.modules.size).toBe(5);
-    expect(state.permissions.size).toBe(14);
+    expect(state.modules.size).toBe(6);
+    expect(state.permissions.size).toBe(25);
     expect(state.roles.size).toBe(3);
     expect(state.users.size).toBe(1);
     expect(state.userRoles.size).toBe(1);

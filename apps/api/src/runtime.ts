@@ -17,6 +17,7 @@ import { createLogger } from "@beyondx/logger";
 import { ModuleRegistry } from "@beyondx/module-system";
 import { FoundationModule } from "@beyondx/module-foundation";
 import { IdentityModule } from "@beyondx/module-identity";
+import { ContentModule } from "@beyondx/module-content";
 import { Redis } from "ioredis";
 import type { ApplicationDependencies } from "./types.js";
 
@@ -96,6 +97,7 @@ export async function createRuntimeDependencies(): Promise<ApplicationDependenci
       },
     }),
   );
+  registry.register(new ContentModule({ database }));
   const kernel = await registry.createKernel({
     services,
     events,

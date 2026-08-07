@@ -7,6 +7,7 @@ export const PLATFORM_MODULES = Object.freeze([
   "@beyondx/module-system",
   "@beyondx/module-foundation",
   "@beyondx/module-identity",
+  "@beyondx/module-content",
 ] as const);
 
 export const IDENTITY_SEED_PERMISSIONS = Object.freeze([
@@ -26,6 +27,20 @@ export const IDENTITY_SEED_PERMISSIONS = Object.freeze([
   ["identity.audit.read", "Read identity audit logs"],
 ] as const);
 
+export const CONTENT_SEED_PERMISSIONS = Object.freeze([
+  ["content.types.read", "Read content types and field definitions"],
+  ["content.types.create", "Create content types"],
+  ["content.types.update", "Update content types and field definitions"],
+  ["content.types.delete", "Delete unused content types"],
+  ["content.entries.read", "Read CMS entries"],
+  ["content.entries.create", "Create CMS entries"],
+  ["content.entries.update", "Update CMS entries"],
+  ["content.entries.delete", "Delete CMS entries"],
+  ["content.entries.publish", "Publish, unpublish and schedule CMS entries"],
+  ["content.entries.archive", "Archive CMS entries"],
+  ["content.revisions.read", "Read CMS revision history"],
+] as const);
+
 export async function seedDatabase(
   prisma: PrismaClient,
   environment: NodeJS.ProcessEnv = process.env,
@@ -43,11 +58,11 @@ export async function seedDatabase(
   await prisma.platformMetadata.upsert({
     where: { key: "platform.identity" },
     update: {
-      value: { name: "BeyondX", slogan: "Build Any Digital Product", phase: 1 },
+      value: { name: "BeyondX", slogan: "Build Any Digital Product", phase: 2 },
     },
     create: {
       key: "platform.identity",
-      value: { name: "BeyondX", slogan: "Build Any Digital Product", phase: 1 },
+      value: { name: "BeyondX", slogan: "Build Any Digital Product", phase: 2 },
     },
   });
 
@@ -55,12 +70,12 @@ export async function seedDatabase(
     await prisma.moduleInstallation.upsert({
       where: { name },
       update: {
-        version: name === "@beyondx/module-identity" ? "0.2.0" : "0.1.0",
+        version: name === "@beyondx/module-content" ? "0.3.0" : name === "@beyondx/module-identity" ? "0.2.0" : "0.1.0",
         enabled: true,
       },
       create: {
         name,
-        version: name === "@beyondx/module-identity" ? "0.2.0" : "0.1.0",
+        version: name === "@beyondx/module-content" ? "0.3.0" : name === "@beyondx/module-identity" ? "0.2.0" : "0.1.0",
         enabled: true,
       },
     });
@@ -74,6 +89,14 @@ export async function seedDatabase(
     });
   }
 
+  for (const [id, description] of CONTENT_SEED_PERMISSIONS) {
+    await prisma.permission.upsert({
+      where: { id },
+      update: { description, module: "@beyondx/module-content" },
+      create: { id, description, module: "@beyondx/module-content" },
+    });
+  }
+
   const superAdmin = await prisma.role.upsert({
     where: { name: "SUPER_ADMIN" },
     update: { description: "Full platform access", system: true },
@@ -81,8 +104,8 @@ export async function seedDatabase(
   });
   const admin = await prisma.role.upsert({
     where: { name: "ADMIN" },
-    update: { description: "Administrative identity access", system: true },
-    create: { name: "ADMIN", description: "Administrative identity access", system: true },
+    update: { description: "Administrative platform access", system: true },
+    create: { name: "ADMIN", description: "Administrative platform access", system: true },
   });
   const userRole = await prisma.role.upsert({
     where: { name: "USER" },
@@ -90,7 +113,7 @@ export async function seedDatabase(
     create: { name: "USER", description: "Default authenticated user", system: true },
   });
 
-  const allPermissionIds = IDENTITY_SEED_PERMISSIONS.map(([id]) => id);
+  const allPermissionIds = [...IDENTITY_SEED_PERMISSIONS, ...CONTENT_SEED_PERMISSIONS].map(([id]) => id);
   const adminPermissionIds = allPermissionIds.filter(
     (id) => !["identity.roles.delete", "identity.audit.read"].includes(id),
   );

@@ -6,6 +6,13 @@ export async function disconnectDatabase(): Promise<void> { if (client) { await 
 export { Prisma, PrismaClient } from "@prisma/client";
 export type {
   AuditLog,
+  ContentEntry,
+  ContentEntryStatus,
+  ContentFieldType,
+  ContentRevision,
+  ContentType,
+  EntryRelation,
+  FieldDefinition,
   EmailVerificationToken,
   ModuleInstallation,
   PasswordResetToken,

@@ -4,7 +4,7 @@
 
 BeyondX is a modular, API-first TypeScript platform for composing CMS, commerce, SaaS, booking, marketplace, education and custom digital products from independent modules.
 
-This repository is the Phase 1 evolution of the approved Phase 0 foundation. It preserves the kernel, module system, typed events, health checks, PostgreSQL/Prisma, Redis, OpenAPI and Scalar documentation, then adds a complete Identity and Access Management module plus a Next.js administration application.
+This repository is the Phase 2 evolution of the approved BeyondX foundation. It preserves the modular kernel and Phase 1 Identity/RBAC stack, then adds an independent CMS and Content module plus a mobile-first administration experience.
 
 ## Phase 1 capabilities
 
@@ -23,6 +23,17 @@ This repository is the Phase 1 evolution of the approved Phase 0 foundation. It 
 - OpenAPI Bearer authentication scheme and Scalar API reference
 - Real Prisma migration and repository integration test support
 
+## Phase 2 capabilities
+
+- Content types with ordered field definitions
+- Draft, Published and Archived content entries
+- Revision history, locale-aware slugs and SEO metadata
+- Entry relations and scheduled publication
+- Protected CMS administration APIs and public published-content APIs
+- CMS RBAC permissions and idempotent seed updates
+- Mobile-first Content and Content Types Admin interfaces
+- Lightweight scheduled publishing with no Admin polling
+
 ## Repository structure
 
 ```text
@@ -32,7 +43,8 @@ beyondx/
 │   └── admin/                # Next.js administration application
 ├── modules/
 │   ├── foundation/           # Phase 0 platform module
-│   └── identity/             # Phase 1 IAM module
+│   ├── identity/             # Phase 1 IAM module
+│   └── content/              # Phase 2 CMS module
 ├── packages/
 │   ├── core/
 │   ├── database/
@@ -67,7 +79,7 @@ pnpm lint
 pnpm typecheck
 pnpm test
 pnpm build
-pnpm verify:phase1
+pnpm verify:phase2
 pnpm dev
 ```
 
@@ -182,10 +194,10 @@ pnpm lint
 pnpm typecheck
 pnpm test
 pnpm build
-pnpm verify:phase1
+pnpm verify:phase2
 ```
 
-`verify:phase1` first runs the Phase 0 structural verifier and then checks all Phase 1 artifacts, models, migration, routes, seed requirements and ZIP exclusions.
+`verify:phase2` chains the Phase 0 and Phase 1 structural verifiers, then checks the Phase 2 CMS module, models, migration, routes, RBAC seed, mobile-first Admin surfaces and ZIP exclusions.
 
 ## Production notes
 
@@ -195,3 +207,52 @@ pnpm verify:phase1
 - Run `pnpm db:migrate:deploy`, not development migration commands.
 - Keep the API and Admin behind a trusted TLS reverse proxy.
 - Review retention requirements for sessions, audit logs and one-time tokens.
+
+## Phase 2 — CMS and Content
+
+Phase 2 adds `@beyondx/module-content` without moving business logic into the API or Admin applications.
+
+### CMS capabilities
+
+- Content types with ordered field definitions
+- Field types: text, rich text, number, boolean, date, JSON and relation
+- Localized entries using `locale`
+- Unique slugs per content type and locale
+- Draft, published and archived lifecycle
+- Immutable revision snapshots for create/update/status changes
+- SEO title, description and extensible metadata
+- Entry-to-entry relations stored independently from entry JSON
+- Scheduled publishing with an indexed, low-frequency worker inside the content module
+- Public read API that only exposes published entries
+- Protected Admin CRUD/publish/unpublish/archive/schedule/revision APIs
+- Content permissions seeded into RBAC and visible in the Roles UI
+
+### Mobile-first Admin
+
+The Admin remains a thin Next.js API client. It does not import Prisma, access PostgreSQL directly or own CMS business rules. The shell is mobile-first: navigation is off-canvas on phones, CMS lists render as touch-friendly cards, and larger desktop layouts are progressive enhancements.
+
+Admin routes:
+
+- `http://127.0.0.1:3000/content`
+- `http://127.0.0.1:3000/content-types`
+
+Public CMS examples:
+
+```text
+GET /api/v1/content/articles?locale=en&page=1&pageSize=20
+GET /api/v1/content/articles/hello-world?locale=en
+```
+
+Phase 2 verification:
+
+```bash
+pnpm install --no-frozen-lockfile
+pnpm db:generate
+pnpm db:migrate
+pnpm db:seed
+pnpm lint
+pnpm typecheck
+pnpm test
+pnpm build
+pnpm verify:phase2
+```

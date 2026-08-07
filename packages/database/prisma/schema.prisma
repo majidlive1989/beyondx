@@ -174,3 +174,121 @@ model PasswordResetToken {
   @@index([userId, expiresAt])
   @@map("password_reset_tokens")
 }
+
+enum ContentFieldType {
+  TEXT
+  RICH_TEXT
+  NUMBER
+  BOOLEAN
+  DATE
+  JSON
+  RELATION
+}
+
+enum ContentEntryStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+model ContentType {
+  id          String            @id @default(cuid())
+  name        String
+  apiId       String            @unique
+  description String?
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  fields      FieldDefinition[]
+  entries     ContentEntry[]
+
+  @@index([name])
+  @@map("content_types")
+}
+
+model FieldDefinition {
+  id            String           @id @default(cuid())
+  contentTypeId String
+  key           String
+  label         String
+  type          ContentFieldType
+  required      Boolean          @default(false)
+  localized     Boolean          @default(false)
+  position      Int              @default(0)
+  validation    Json?
+  settings      Json?
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+  contentType   ContentType      @relation(fields: [contentTypeId], references: [id], onDelete: Cascade)
+
+  @@unique([contentTypeId, key])
+  @@index([contentTypeId, position])
+  @@map("field_definitions")
+}
+
+model ContentEntry {
+  id                 String             @id @default(cuid())
+  contentTypeId      String
+  slug               String
+  locale             String             @default("en")
+  status             ContentEntryStatus @default(DRAFT)
+  data               Json
+  seoTitle           String?
+  seoDescription     String?
+  seoMetadata        Json?
+  scheduledPublishAt DateTime?
+  publishedAt        DateTime?
+  archivedAt         DateTime?
+  currentRevision    Int                @default(1)
+  createdById        String?
+  updatedById        String?
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  contentType        ContentType         @relation(fields: [contentTypeId], references: [id], onDelete: Restrict)
+  revisions          ContentRevision[]
+  outgoingRelations  EntryRelation[]     @relation("EntryRelationSource")
+  incomingRelations  EntryRelation[]     @relation("EntryRelationTarget")
+
+  @@unique([contentTypeId, locale, slug])
+  @@index([contentTypeId, status, locale])
+  @@index([status, scheduledPublishAt])
+  @@index([updatedAt])
+  @@map("content_entries")
+}
+
+model ContentRevision {
+  id                 String             @id @default(cuid())
+  entryId            String
+  revision           Int
+  slug               String
+  locale             String
+  status             ContentEntryStatus
+  data               Json
+  seoTitle           String?
+  seoDescription     String?
+  seoMetadata        Json?
+  scheduledPublishAt DateTime?
+  publishedAt        DateTime?
+  archivedAt         DateTime?
+  createdById        String?
+  createdAt          DateTime           @default(now())
+  entry               ContentEntry       @relation(fields: [entryId], references: [id], onDelete: Cascade)
+
+  @@unique([entryId, revision])
+  @@index([entryId, createdAt])
+  @@map("content_revisions")
+}
+
+model EntryRelation {
+  id            String       @id @default(cuid())
+  sourceEntryId String
+  targetEntryId String
+  fieldKey      String
+  createdAt     DateTime     @default(now())
+  sourceEntry   ContentEntry @relation("EntryRelationSource", fields: [sourceEntryId], references: [id], onDelete: Cascade)
+  targetEntry   ContentEntry @relation("EntryRelationTarget", fields: [targetEntryId], references: [id], onDelete: Cascade)
+
+  @@unique([sourceEntryId, fieldKey, targetEntryId])
+  @@index([targetEntryId])
+  @@index([sourceEntryId, fieldKey])
+  @@map("entry_relations")
+}

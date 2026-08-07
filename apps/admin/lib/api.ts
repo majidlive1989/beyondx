@@ -1,4 +1,17 @@
-import type { AdminRole, AdminSession, AdminUser, AuditLog, AuthResponse, Page, Permission } from "./types";
+import type {
+  AdminRole,
+  AdminSession,
+  AdminUser,
+  AuditLog,
+  AuthResponse,
+  ContentEntry,
+  ContentEntryStatus,
+  ContentFieldInput,
+  ContentRevision,
+  ContentType,
+  Page,
+  Permission,
+} from "./types";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://127.0.0.1:4000";
 const ACCESS_TOKEN_KEY = "beyondx.admin.access-token";
@@ -182,4 +195,129 @@ export function resetPassword(token: string, password: string): Promise<{ reset:
     method: "POST",
     body: JSON.stringify({ token, password }),
   }, false);
+}
+
+
+export async function listContentTypes(): Promise<ContentType[]> {
+  return (await request<{ items: ContentType[] }>("/api/v1/admin/content-types")).items;
+}
+
+export async function createContentType(input: {
+  name: string;
+  apiId: string;
+  description?: string | null;
+  fields: ContentFieldInput[];
+}): Promise<ContentType> {
+  return (
+    await request<{ contentType: ContentType }>("/api/v1/admin/content-types", {
+      method: "POST",
+      body: JSON.stringify(input),
+    })
+  ).contentType;
+}
+
+export async function updateContentType(
+  id: string,
+  input: { name?: string; description?: string | null; fields?: ContentFieldInput[] },
+): Promise<ContentType> {
+  return (
+    await request<{ contentType: ContentType }>(`/api/v1/admin/content-types/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(input),
+    })
+  ).contentType;
+}
+
+export function deleteContentType(id: string): Promise<void> {
+  return request<void>(`/api/v1/admin/content-types/${id}`, { method: "DELETE" });
+}
+
+export function listContentEntries(input: {
+  search?: string;
+  contentTypeId?: string;
+  status?: ContentEntryStatus;
+  locale?: string;
+  page?: number;
+  pageSize?: number;
+} = {}): Promise<Page<ContentEntry>> {
+  const query = new URLSearchParams({
+    page: String(input.page ?? 1),
+    pageSize: String(input.pageSize ?? 50),
+  });
+  if (input.search) query.set("search", input.search);
+  if (input.contentTypeId) query.set("contentTypeId", input.contentTypeId);
+  if (input.status) query.set("status", input.status);
+  if (input.locale) query.set("locale", input.locale);
+  return request<Page<ContentEntry>>(`/api/v1/admin/content-entries?${query}`);
+}
+
+export async function createContentEntry(input: {
+  contentTypeId: string;
+  slug: string;
+  locale: string;
+  data: Record<string, unknown>;
+  seoTitle?: string | null;
+  seoDescription?: string | null;
+  seoMetadata?: Record<string, unknown> | null;
+  relations?: Array<{ fieldKey: string; targetEntryId: string }>;
+}): Promise<ContentEntry> {
+  return (
+    await request<{ entry: ContentEntry }>("/api/v1/admin/content-entries", {
+      method: "POST",
+      body: JSON.stringify(input),
+    })
+  ).entry;
+}
+
+export async function updateContentEntry(
+  id: string,
+  input: {
+    slug?: string;
+    locale?: string;
+    data?: Record<string, unknown>;
+    seoTitle?: string | null;
+    seoDescription?: string | null;
+    seoMetadata?: Record<string, unknown> | null;
+    relations?: Array<{ fieldKey: string; targetEntryId: string }>;
+  },
+): Promise<ContentEntry> {
+  return (
+    await request<{ entry: ContentEntry }>(`/api/v1/admin/content-entries/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(input),
+    })
+  ).entry;
+}
+
+export function deleteContentEntry(id: string): Promise<void> {
+  return request<void>(`/api/v1/admin/content-entries/${id}`, { method: "DELETE" });
+}
+
+async function contentAction(path: string): Promise<ContentEntry> {
+  return (await request<{ entry: ContentEntry }>(path, { method: "POST" })).entry;
+}
+
+export function publishContentEntry(id: string): Promise<ContentEntry> {
+  return contentAction(`/api/v1/admin/content-entries/${id}/publish`);
+}
+
+export function unpublishContentEntry(id: string): Promise<ContentEntry> {
+  return contentAction(`/api/v1/admin/content-entries/${id}/unpublish`);
+}
+
+export function archiveContentEntry(id: string): Promise<ContentEntry> {
+  return contentAction(`/api/v1/admin/content-entries/${id}/archive`);
+}
+
+export async function scheduleContentEntry(id: string, scheduledPublishAt: string | null): Promise<ContentEntry> {
+  return (
+    await request<{ entry: ContentEntry }>(`/api/v1/admin/content-entries/${id}/schedule`, {
+      method: "POST",
+      body: JSON.stringify({ scheduledPublishAt }),
+    })
+  ).entry;
+}
+
+export async function listContentRevisions(id: string): Promise<ContentRevision[]> {
+  return (await request<{ items: ContentRevision[] }>(`/api/v1/admin/content-entries/${id}/revisions`)).items;
 }
