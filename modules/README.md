@@ -12,3 +12,7 @@ Every module contains a package manifest, `module.json`, TypeScript configuratio
 ## Phase 2 module
 
 `@beyondx/module-content` owns CMS domain logic, persistence adapters, permissions, routes, revisions and scheduled publishing. `apps/api` only registers the module; `apps/admin` only consumes its HTTP API.
+
+## Phase 2 Media Module
+
+`@beyondx/module-media` owns media metadata, secure upload validation, storage adapters and image inspection. The existing `@beyondx/module-content` package is retained as Phase 6 groundwork and is not a dependency of Media.

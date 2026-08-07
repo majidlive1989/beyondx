@@ -15,6 +15,8 @@ export type {
   FieldDefinition,
   EmailVerificationToken,
   ModuleInstallation,
+  MediaAsset,
+  MediaKind,
   PasswordResetToken,
   Permission,
   PlatformMetadata,

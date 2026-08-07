@@ -18,6 +18,7 @@ import { ModuleRegistry } from "@beyondx/module-system";
 import { FoundationModule } from "@beyondx/module-foundation";
 import { IdentityModule } from "@beyondx/module-identity";
 import { ContentModule } from "@beyondx/module-content";
+import { MediaModule } from "@beyondx/module-media";
 import { Redis } from "ioredis";
 import type { ApplicationDependencies } from "./types.js";
 
@@ -98,6 +99,15 @@ export async function createRuntimeDependencies(): Promise<ApplicationDependenci
     }),
   );
   registry.register(new ContentModule({ database }));
+  registry.register(
+    new MediaModule({
+      database,
+      storageDriver: config.MEDIA_STORAGE_DRIVER,
+      localRoot: config.MEDIA_LOCAL_ROOT,
+      maxFileSizeBytes: config.MEDIA_MAX_FILE_SIZE_BYTES,
+      allowedMimeTypes: config.MEDIA_ALLOWED_MIME_TYPES,
+    }),
+  );
   const kernel = await registry.createKernel({
     services,
     events,

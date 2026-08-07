@@ -8,6 +8,7 @@ export const PLATFORM_MODULES = Object.freeze([
   "@beyondx/module-foundation",
   "@beyondx/module-identity",
   "@beyondx/module-content",
+  "@beyondx/module-media",
 ] as const);
 
 export const IDENTITY_SEED_PERMISSIONS = Object.freeze([
@@ -41,6 +42,13 @@ export const CONTENT_SEED_PERMISSIONS = Object.freeze([
   ["content.revisions.read", "Read CMS revision history"],
 ] as const);
 
+export const MEDIA_SEED_PERMISSIONS = Object.freeze([
+  ["media.assets.read", "Read media assets and file content"],
+  ["media.assets.upload", "Upload media assets"],
+  ["media.assets.update", "Update media metadata and image accessibility text"],
+  ["media.assets.delete", "Delete media assets"],
+] as const);
+
 export async function seedDatabase(
   prisma: PrismaClient,
   environment: NodeJS.ProcessEnv = process.env,
@@ -70,12 +78,12 @@ export async function seedDatabase(
     await prisma.moduleInstallation.upsert({
       where: { name },
       update: {
-        version: name === "@beyondx/module-content" ? "0.3.0" : name === "@beyondx/module-identity" ? "0.2.0" : "0.1.0",
+        version: ["@beyondx/module-content", "@beyondx/module-media"].includes(name) ? "0.3.0" : name === "@beyondx/module-identity" ? "0.2.0" : "0.1.0",
         enabled: true,
       },
       create: {
         name,
-        version: name === "@beyondx/module-content" ? "0.3.0" : name === "@beyondx/module-identity" ? "0.2.0" : "0.1.0",
+        version: ["@beyondx/module-content", "@beyondx/module-media"].includes(name) ? "0.3.0" : name === "@beyondx/module-identity" ? "0.2.0" : "0.1.0",
         enabled: true,
       },
     });
@@ -97,6 +105,14 @@ export async function seedDatabase(
     });
   }
 
+  for (const [id, description] of MEDIA_SEED_PERMISSIONS) {
+    await prisma.permission.upsert({
+      where: { id },
+      update: { description, module: "@beyondx/module-media" },
+      create: { id, description, module: "@beyondx/module-media" },
+    });
+  }
+
   const superAdmin = await prisma.role.upsert({
     where: { name: "SUPER_ADMIN" },
     update: { description: "Full platform access", system: true },
@@ -113,7 +129,7 @@ export async function seedDatabase(
     create: { name: "USER", description: "Default authenticated user", system: true },
   });
 
-  const allPermissionIds = [...IDENTITY_SEED_PERMISSIONS, ...CONTENT_SEED_PERMISSIONS].map(([id]) => id);
+  const allPermissionIds = [...IDENTITY_SEED_PERMISSIONS, ...CONTENT_SEED_PERMISSIONS, ...MEDIA_SEED_PERMISSIONS].map(([id]) => id);
   const adminPermissionIds = allPermissionIds.filter(
     (id) => !["identity.roles.delete", "identity.audit.read"].includes(id),
   );

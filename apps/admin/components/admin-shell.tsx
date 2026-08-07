@@ -9,6 +9,7 @@ const navigation = [
   { href: "/dashboard", label: "Dashboard" },
   { href: "/content", label: "Content", permission: "content.entries.read" },
   { href: "/content-types", label: "Content types", permission: "content.types.read" },
+  { href: "/media", label: "Media", permission: "media.assets.read" },
   { href: "/users", label: "Users", permission: "identity.users.read" },
   { href: "/roles", label: "Roles", permission: "identity.roles.read" },
   { href: "/sessions", label: "Sessions", permission: "identity.sessions.manage" },

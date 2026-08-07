@@ -256,3 +256,8 @@ pnpm test
 pnpm build
 pnpm verify:phase2
 ```
+
+
+## Phase 2 — Media Module
+
+BeyondX now includes `@beyondx/module-media` for secure multipart uploads, media metadata, local pluggable storage, image dimensions, MIME signature validation and a mobile-first `/media` Admin library. The existing CMS groundwork is retained for later Phase 6 completion and does not sit in the Media dependency chain.

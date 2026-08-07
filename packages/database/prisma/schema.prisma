@@ -13,6 +13,11 @@ enum UserStatus {
   DISABLED
 }
 
+enum MediaKind {
+  IMAGE
+  FILE
+}
+
 model PlatformMetadata {
   key       String   @id
   value     Json
@@ -52,6 +57,7 @@ model User {
   auditLogs            AuditLog[]               @relation("AuditActor")
   emailTokens          EmailVerificationToken[]
   passwordResetTokens PasswordResetToken[]
+  mediaAssets          MediaAsset[]             @relation("MediaUploader")
 
   @@index([status])
   @@index([createdAt])
@@ -291,4 +297,30 @@ model EntryRelation {
   @@index([targetEntryId])
   @@index([sourceEntryId, fieldKey])
   @@map("entry_relations")
+}
+
+model MediaAsset {
+  id               String    @id @default(cuid())
+  originalName     String
+  fileName         String
+  storageProvider  String
+  storageKey       String    @unique
+  mimeType         String
+  kind             MediaKind
+  sizeBytes        Int
+  checksumSha256   String
+  width            Int?
+  height           Int?
+  altText          String?
+  title            String?
+  metadata         Json?
+  uploadedByUserId String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  uploadedBy       User?     @relation("MediaUploader", fields: [uploadedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([kind, createdAt])
+  @@index([mimeType])
+  @@index([uploadedByUserId, createdAt])
+  @@map("media_assets")
 }

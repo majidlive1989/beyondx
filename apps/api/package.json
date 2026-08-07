@@ -31,7 +31,9 @@
     "pino": "9.9.0",
     "@beyondx/module-foundation": "workspace:*",
     "@beyondx/module-identity": "workspace:*",
-    "@beyondx/module-content": "workspace:*"
+    "@beyondx/module-content": "workspace:*",
+    "@beyondx/module-media": "workspace:*",
+    "@fastify/multipart": "10.1.0"
   },
   "devDependencies": {
     "@beyondx/testing": "workspace:*"

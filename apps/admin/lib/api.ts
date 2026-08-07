@@ -9,6 +9,7 @@ import type {
   ContentFieldInput,
   ContentRevision,
   ContentType,
+  MediaAsset,
   Page,
   Permission,
 } from "./types";
@@ -37,10 +38,18 @@ export function setAccessToken(token: string | null): void {
   else window.sessionStorage.removeItem(ACCESS_TOKEN_KEY);
 }
 
-async function request<T>(path: string, init: RequestInit = {}, retry = true): Promise<T> {
+async function request<T>(
+  path: string,
+  init: RequestInit = {},
+  retry = true,
+  includeAuth = true,
+): Promise<T> {
   const headers = new Headers(init.headers);
-  if (init.body && !headers.has("content-type")) headers.set("content-type", "application/json");
-  const token = getAccessToken();
+  const isFormData = typeof FormData !== "undefined" && init.body instanceof FormData;
+  if (init.body && !isFormData && !headers.has("content-type")) {
+    headers.set("content-type", "application/json");
+  }
+  const token = includeAuth ? getAccessToken() : null;
   if (token) headers.set("authorization", `Bearer ${token}`);
 
   const response = await fetch(`${API_URL}${path}`, {
@@ -49,9 +58,9 @@ async function request<T>(path: string, init: RequestInit = {}, retry = true): P
     credentials: "include",
   });
 
-  if (response.status === 401 && retry && !path.endsWith("/auth/refresh")) {
+  if (response.status === 401 && retry && includeAuth && !path.endsWith("/auth/refresh")) {
     const refreshed = await refreshSession().catch(() => null);
-    if (refreshed) return request<T>(path, init, false);
+    if (refreshed) return request<T>(path, init, false, true);
   }
 
   if (!response.ok) {
@@ -69,21 +78,37 @@ async function request<T>(path: string, init: RequestInit = {}, retry = true): P
 }
 
 export async function login(email: string, password: string): Promise<AuthResponse> {
-  const result = await request<AuthResponse>("/api/v1/auth/login", {
-    method: "POST",
-    body: JSON.stringify({ email, password }),
-  }, false);
+  setAccessToken(null);
+  const result = await request<AuthResponse>(
+    "/api/v1/auth/login",
+    {
+      method: "POST",
+      body: JSON.stringify({ email, password }),
+    },
+    false,
+    false,
+  );
   setAccessToken(result.accessToken);
   return result;
 }
 
 export async function refreshSession(): Promise<AuthResponse> {
-  const result = await request<AuthResponse>("/api/v1/auth/refresh", {
-    method: "POST",
-    body: JSON.stringify({}),
-  }, false);
-  setAccessToken(result.accessToken);
-  return result;
+  try {
+    const result = await request<AuthResponse>(
+      "/api/v1/auth/refresh",
+      {
+        method: "POST",
+        body: JSON.stringify({}),
+      },
+      false,
+      false,
+    );
+    setAccessToken(result.accessToken);
+    return result;
+  } catch (error) {
+    setAccessToken(null);
+    throw error;
+  }
 }
 
 export async function logout(): Promise<void> {
@@ -187,14 +212,14 @@ export function verifyEmail(token: string): Promise<{ verified: true }> {
   return request("/api/v1/auth/email/verify", {
     method: "POST",
     body: JSON.stringify({ token }),
-  }, false);
+  }, false, false);
 }
 
 export function resetPassword(token: string, password: string): Promise<{ reset: true }> {
   return request("/api/v1/auth/password/reset", {
     method: "POST",
     body: JSON.stringify({ token, password }),
-  }, false);
+  }, false, false);
 }
 
 
@@ -320,4 +345,77 @@ export async function scheduleContentEntry(id: string, scheduledPublishAt: strin
 
 export async function listContentRevisions(id: string): Promise<ContentRevision[]> {
   return (await request<{ items: ContentRevision[] }>(`/api/v1/admin/content-entries/${id}/revisions`)).items;
+}
+
+export function listMedia(input: {
+  search?: string;
+  kind?: "IMAGE" | "FILE";
+  page?: number;
+  pageSize?: number;
+} = {}): Promise<Page<MediaAsset>> {
+  const query = new URLSearchParams({
+    page: String(input.page ?? 1),
+    pageSize: String(input.pageSize ?? 24),
+  });
+  if (input.search) query.set("search", input.search);
+  if (input.kind) query.set("kind", input.kind);
+  return request<Page<MediaAsset>>(`/api/v1/admin/media?${query}`);
+}
+
+export async function uploadMedia(input: {
+  file: File;
+  title?: string;
+  altText?: string;
+}): Promise<MediaAsset> {
+  const form = new FormData();
+  form.set("file", input.file);
+  if (input.title) form.set("title", input.title);
+  if (input.altText) form.set("altText", input.altText);
+  return (
+    await request<{ asset: MediaAsset }>("/api/v1/admin/media", {
+      method: "POST",
+      body: form,
+    })
+  ).asset;
+}
+
+export async function updateMedia(
+  id: string,
+  input: {
+    title?: string | null;
+    altText?: string | null;
+    metadata?: Record<string, unknown> | null;
+  },
+): Promise<MediaAsset> {
+  return (
+    await request<{ asset: MediaAsset }>(`/api/v1/admin/media/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(input),
+    })
+  ).asset;
+}
+
+export function deleteMedia(id: string): Promise<void> {
+  return request<void>(`/api/v1/admin/media/${id}`, { method: "DELETE" });
+}
+
+export async function fetchMediaContent(id: string): Promise<Blob> {
+  const token = getAccessToken();
+  const headers = new Headers();
+  if (token) headers.set("authorization", `Bearer ${token}`);
+  const response = await fetch(`${API_URL}/api/v1/admin/media/${id}/content`, {
+    headers,
+    credentials: "include",
+  });
+  if (!response.ok) {
+    const payload = (await response.json().catch(() => null)) as
+      | { error?: { code?: string; message?: string } }
+      | null;
+    throw new ApiError(
+      payload?.error?.message ?? `Request failed with HTTP ${response.status}`,
+      payload?.error?.code ?? "HTTP_REQUEST_FAILED",
+      response.status,
+    );
+  }
+  return response.blob();
 }

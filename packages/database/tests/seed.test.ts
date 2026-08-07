@@ -112,8 +112,8 @@ describe("Phase 2 database seed", () => {
     await seedDatabase(client, environment);
     await seedDatabase(client, environment);
 
-    expect(state.modules.size).toBe(6);
-    expect(state.permissions.size).toBe(25);
+    expect(state.modules.size).toBe(7);
+    expect(state.permissions.size).toBe(29);
     expect(state.roles.size).toBe(3);
     expect(state.users.size).toBe(1);
     expect(state.userRoles.size).toBe(1);

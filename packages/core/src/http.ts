@@ -2,6 +2,14 @@ import { AppError } from "./errors.js";
 
 export type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 
+export interface HttpUploadedFile {
+  fieldName: string;
+  filename: string;
+  encoding: string;
+  mimeType: string;
+  data: Uint8Array;
+}
+
 export interface HttpPrincipal {
   subject: string;
   permissions: ReadonlySet<string>;
@@ -15,6 +23,7 @@ export interface HttpRequestContext {
   body: unknown;
   headers: Readonly<Record<string, string | string[] | undefined>>;
   principal?: HttpPrincipal;
+  files?: Readonly<Record<string, HttpUploadedFile>>;
 }
 
 export interface HttpRouteResponse {
@@ -30,6 +39,7 @@ export interface HttpRouteDefinition {
   tags: string[];
   public: boolean;
   permission?: string;
+  multipart?: boolean;
   schema?: Record<string, unknown>;
   handler(context: HttpRequestContext): Promise<HttpRouteResponse>;
 }

@@ -26,6 +26,18 @@ const environmentSchema = z.object({
   OPENAPI_ENABLED: booleanString.default("true"), OPENAPI_ROUTE: z.string().startsWith("/").default("/openapi.json"), DOCS_ROUTE: z.string().startsWith("/").default("/docs"),
   RATE_LIMIT_MAX: z.coerce.number().int().positive().default(100), RATE_LIMIT_WINDOW: z.string().min(1).default("1 minute"),
   SHUTDOWN_TIMEOUT_MS: z.coerce.number().int().min(1000).max(60000).default(10000),
+  MEDIA_STORAGE_DRIVER: z.enum(["local"]).default("local"),
+  MEDIA_LOCAL_ROOT: z.string().min(1).default("./storage/media"),
+  MEDIA_MAX_FILE_SIZE_BYTES: z.coerce.number().int().min(1024).max(52_428_800).default(10_485_760),
+  MEDIA_ALLOWED_MIME_TYPES: z
+    .string()
+    .default("image/jpeg,image/png,image/webp,image/gif,application/pdf")
+    .transform((value: string) =>
+      value
+        .split(",")
+        .map((item) => item.trim().toLowerCase())
+        .filter(Boolean),
+    ),
 });
 export type AppConfig = z.infer<typeof environmentSchema>;
 

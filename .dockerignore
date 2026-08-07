@@ -8,3 +8,5 @@ coverage
 .env
 .git
 .turbo
+storage/media/*
+!storage/media/.gitkeep

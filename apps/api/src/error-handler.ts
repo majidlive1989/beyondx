@@ -53,10 +53,18 @@ export function registerGlobalErrorHandler(app: BeyondXFastifyInstance): void {
       appError?.statusCode ?? (isValidation ? 400 : (clientStatusCode ?? 500));
     const code =
       appError?.code ??
-      (isValidation ? "VALIDATION_INVALID_REQUEST" : "CORE_INTERNAL_ERROR");
+      (statusCode === 413
+        ? "MEDIA_FILE_TOO_LARGE"
+        : isValidation
+          ? "VALIDATION_INVALID_REQUEST"
+          : "CORE_INTERNAL_ERROR");
     const message =
       appError?.message ??
-      (isValidation ? "Request validation failed" : "An unexpected error occurred");
+      (statusCode === 413
+        ? "Uploaded file exceeds the configured size limit"
+        : isValidation
+          ? "Request validation failed"
+          : "An unexpected error occurred");
 
     if (statusCode >= 500) {
       request.log.error({ err: error, requestId: request.id, code }, message);

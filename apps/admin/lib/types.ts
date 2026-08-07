@@ -129,3 +129,22 @@ export interface ContentFieldInput {
   validation: Record<string, unknown> | null;
   settings: Record<string, unknown> | null;
 }
+
+export interface MediaAsset {
+  id: string;
+  originalName: string;
+  fileName: string;
+  storageProvider: string;
+  mimeType: string;
+  kind: "IMAGE" | "FILE";
+  sizeBytes: number;
+  checksumSha256: string;
+  width: number | null;
+  height: number | null;
+  altText: string | null;
+  title: string | null;
+  metadata: Record<string, unknown> | null;
+  uploadedByUserId: string | null;
+  createdAt: string;
+  updatedAt: string;
+}

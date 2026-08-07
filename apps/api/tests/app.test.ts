@@ -106,6 +106,10 @@ async function createDependencies(
       RATE_LIMIT_MAX: 100,
       RATE_LIMIT_WINDOW: "1 minute",
       SHUTDOWN_TIMEOUT_MS: 10_000,
+      MEDIA_STORAGE_DRIVER: "local",
+      MEDIA_LOCAL_ROOT: "./storage/media-test",
+      MEDIA_MAX_FILE_SIZE_BYTES: 10_485_760,
+      MEDIA_ALLOWED_MIME_TYPES: ["image/jpeg", "image/png", "image/webp", "image/gif", "application/pdf"],
     },
     logger,
     health,
@@ -226,6 +230,26 @@ describe("BeyondX API", () => {
     expect(response.json<ErrorResponse>()).toMatchObject({
       error: { code: "IDENTITY_INVALID_ACCESS_TOKEN" },
     });
+  });
+
+  it("ignores stale bearer tokens on public module routes", async () => {
+    const dependencies = await createDependencies();
+    dependencies.routes.register("test", {
+      method: "POST",
+      path: "/api/v1/public-auth-test",
+      summary: "Public auth test",
+      tags: ["Test"],
+      public: true,
+      handler: () => Promise.resolve({ body: { ok: true } }),
+    });
+    const app = await createApp(dependencies);
+    apps.push(app);
+    const response = await app.inject({
+      method: "POST",
+      url: "/api/v1/public-auth-test",
+      headers: { authorization: "Bearer stale-token" },
+    });
+    expect(response.statusCode).toBe(200);
   });
 
   it("authenticates bearer tokens before protected module routes", async () => {

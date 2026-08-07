@@ -1,6 +1,7 @@
 import cors from "@fastify/cors";
 import helmet from "@fastify/helmet";
 import rateLimit from "@fastify/rate-limit";
+import multipart, { ajvFilePlugin } from "@fastify/multipart";
 import swagger from "@fastify/swagger";
 import scalar from "@scalar/fastify-api-reference";
 import Fastify from "fastify";
@@ -26,6 +27,9 @@ export async function createApp(
     trustProxy: true,
     requestIdHeader: "x-request-id",
     disableRequestLogging: false,
+    ajv: {
+      plugins: [ajvFilePlugin],
+    },
   });
 
   await app.register(cors, {
@@ -43,15 +47,28 @@ export async function createApp(
     keyGenerator: (request) => request.ip,
   });
 
+  await app.register(multipart, {
+    attachFieldsToBody: true,
+    limits: {
+      fileSize: config.MEDIA_MAX_FILE_SIZE_BYTES,
+      files: 1,
+      fields: 8,
+      parts: 9,
+      fieldSize: 16_384,
+    },
+  });
+
   if (config.OPENAPI_ENABLED) {
     await app.register(swagger, {
       openapi: {
         info: {
           title: "BeyondX API",
           description: "API-first modular digital product platform",
-          version: "0.2.0",
+          version: "0.3.0",
         },
-        servers: [{ url: config.APP_URL }],
+        // Keep the OpenAPI server relative so Scalar Try It uses the same origin
+        // that served /docs (localhost, 127.0.0.1, reverse proxy, etc.).
+        servers: [{ url: "/" }],
         components: {
           securitySchemes: {
             bearerAuth: {
@@ -66,6 +83,9 @@ export async function createApp(
           { name: "Platform", description: "Platform metadata" },
           { name: "Identity", description: "Authentication and personal identity" },
           { name: "Identity Admin", description: "Users, roles, permissions, sessions and audit" },
+          { name: "Content", description: "Published content delivery" },
+          { name: "Content Admin", description: "CMS content types, entries and revisions" },
+          { name: "Media", description: "Media library, uploads, storage and image management" },
         ],
       },
     });
@@ -74,6 +94,9 @@ export async function createApp(
   registerGlobalErrorHandler(app);
 
   app.addHook("onRequest", async (request) => {
+    const routeConfig = request.routeOptions.config as { beyondxPublic?: boolean } | undefined;
+    if (routeConfig?.beyondxPublic === true) return;
+
     const authorization = request.headers.authorization;
     if (!authorization) return;
     const [scheme, token, extra] = authorization.trim().split(/\s+/);
