@@ -1,0 +1,78 @@
+{
+  "$schema": "https://turbo.build/schema.json",
+  "globalDependencies": [
+    ".env"
+  ],
+  "globalEnv": [
+    "NODE_ENV",
+    "APP_NAME",
+    "APP_URL",
+    "API_HOST",
+    "API_PORT",
+    "LOG_LEVEL",
+    "DATABASE_URL",
+    "REDIS_URL",
+    "JWT_ACCESS_SECRET",
+    "JWT_REFRESH_SECRET",
+    "JWT_ACCESS_EXPIRES_IN",
+    "JWT_REFRESH_EXPIRES_IN",
+    "PASSWORD_SALT_ROUNDS",
+    "LOGIN_LOCK_MINUTES",
+    "LOGIN_MAX_ATTEMPTS",
+    "REFRESH_COOKIE_SECURE",
+    "REFRESH_COOKIE_NAME",
+    "PASSWORD_RESET_EXPIRES_IN",
+    "EMAIL_VERIFICATION_EXPIRES_IN",
+    "ADMIN_URL",
+    "NEXT_PUBLIC_API_URL",
+    "ADMIN_EMAIL",
+    "ADMIN_PASSWORD",
+    "ADMIN_FIRST_NAME",
+    "ADMIN_LAST_NAME",
+    "CORS_ORIGIN",
+    "SMTP_HOST",
+    "SMTP_PORT",
+    "SMTP_SECURE",
+    "SMTP_FROM",
+    "OPENAPI_ENABLED",
+    "OPENAPI_ROUTE",
+    "DOCS_ROUTE",
+    "RATE_LIMIT_MAX",
+    "RATE_LIMIT_WINDOW",
+    "SHUTDOWN_TIMEOUT_MS"
+  ],
+  "tasks": {
+    "build": {
+      "dependsOn": [
+        "^build"
+      ],
+      "outputs": [
+        "dist/**",
+        ".next/**"
+      ]
+    },
+    "dev": {
+      "cache": false,
+      "persistent": true
+    },
+    "lint": {
+      "dependsOn": [
+        "^lint"
+      ]
+    },
+    "typecheck": {
+      "dependsOn": [
+        "^typecheck"
+      ]
+    },
+    "test": {
+      "dependsOn": [
+        "^build"
+      ],
+      "outputs": []
+    },
+    "clean": {
+      "cache": false
+    }
+  }
+}

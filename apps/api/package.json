@@ -1,0 +1,38 @@
+{
+  "name": "@beyondx/api",
+  "version": "0.2.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node --import tsx --conditions=development --watch src/server.ts",
+    "start": "node dist/server.js",
+    "build": "tsc -p tsconfig.build.json",
+    "clean": "rm -rf dist",
+    "lint": "eslint src tests --max-warnings=0",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@beyondx/config": "workspace:*",
+    "@beyondx/core": "workspace:*",
+    "@beyondx/database": "workspace:*",
+    "@beyondx/events": "workspace:*",
+    "@beyondx/logger": "workspace:*",
+    "@beyondx/module-system": "workspace:*",
+    "@beyondx/validation": "workspace:*",
+    "@fastify/cors": "11.1.0",
+    "@fastify/helmet": "13.0.1",
+    "@fastify/rate-limit": "10.3.0",
+    "@fastify/swagger": "9.5.1",
+    "@scalar/fastify-api-reference": "1.34.6",
+    "fastify": "5.6.0",
+    "ioredis": "5.7.0",
+    "zod": "3.25.76",
+    "pino": "9.9.0",
+    "@beyondx/module-foundation": "workspace:*",
+    "@beyondx/module-identity": "workspace:*"
+  },
+  "devDependencies": {
+    "@beyondx/testing": "workspace:*"
+  }
+}

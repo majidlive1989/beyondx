@@ -1,0 +1,32 @@
+{
+  "name": "@beyondx/module-identity",
+  "displayName": "Identity and Access Management",
+  "version": "0.2.0",
+  "description": "Authentication, users, sessions, roles, permissions and audit logs",
+  "dependencies": ["@beyondx/module-foundation"],
+  "optionalDependencies": [],
+  "permissions": [
+    "identity.profile.read",
+    "identity.profile.update",
+    "identity.sessions.read",
+    "identity.sessions.revoke",
+    "identity.users.read",
+    "identity.users.create",
+    "identity.users.update",
+    "identity.users.roles.manage",
+    "identity.roles.read",
+    "identity.roles.create",
+    "identity.roles.update",
+    "identity.roles.delete",
+    "identity.sessions.manage",
+    "identity.audit.read"
+  ],
+  "capabilities": [
+    "identity.authentication",
+    "identity.users",
+    "identity.roles",
+    "identity.permissions",
+    "identity.sessions",
+    "identity.audit"
+  ]
+}

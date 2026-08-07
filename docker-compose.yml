@@ -1,0 +1,121 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: beyondx
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - beyondx_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d beyondx"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  redis:
+    image: redis:7.4-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "6379:6379"
+    volumes:
+      - beyondx_redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  mailpit:
+    image: axllent/mailpit:v1.27
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+    healthcheck:
+      test: ["CMD", "/mailpit", "readyz"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      NODE_ENV: development
+      APP_NAME: BeyondX
+      APP_URL: http://localhost:4000
+      API_HOST: 0.0.0.0
+      API_PORT: 4000
+      LOG_LEVEL: info
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/beyondx?schema=public
+      REDIS_URL: redis://redis:6379
+      JWT_ACCESS_SECRET: docker-development-access-secret-change-me-1234
+      JWT_REFRESH_SECRET: docker-development-refresh-secret-change-me-123
+      JWT_ACCESS_EXPIRES_IN: 15m
+      JWT_REFRESH_EXPIRES_IN: 30d
+      PASSWORD_SALT_ROUNDS: 12
+      ADMIN_URL: http://localhost:3000
+      EMAIL_VERIFICATION_EXPIRES_IN: 24h
+      PASSWORD_RESET_EXPIRES_IN: 1h
+      REFRESH_COOKIE_NAME: beyondx_refresh
+      REFRESH_COOKIE_SECURE: "false"
+      LOGIN_MAX_ATTEMPTS: 5
+      LOGIN_LOCK_MINUTES: 15
+      ADMIN_EMAIL: admin@beyondx.local
+      ADMIN_PASSWORD: ChangeMe123!
+      ADMIN_FIRST_NAME: BeyondX
+      ADMIN_LAST_NAME: Admin
+      CORS_ORIGIN: http://localhost:3000,http://localhost:3001
+      SMTP_HOST: mailpit
+      SMTP_PORT: 1025
+      SMTP_SECURE: "false"
+      SMTP_FROM: no-reply@beyondx.local
+      OPENAPI_ENABLED: "true"
+      OPENAPI_ROUTE: /openapi.json
+      DOCS_ROUTE: /docs
+      RATE_LIMIT_MAX: 100
+      RATE_LIMIT_WINDOW: 1 minute
+      SHUTDOWN_TIMEOUT_MS: 10000
+    ports:
+      - "4000:4000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      mailpit:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:4000/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+  admin:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: ["pnpm", "--filter", "@beyondx/admin", "start"]
+    environment:
+      NODE_ENV: production
+      NEXT_PUBLIC_API_URL: http://127.0.0.1:4000
+    ports:
+      - "3000:3000"
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:3000/login').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+volumes:
+  beyondx_postgres_data:
+  beyondx_redis_data:

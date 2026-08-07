@@ -1,0 +1,15 @@
+{
+  "name": "@beyondx/module-foundation",
+  "displayName": "BeyondX Foundation",
+  "version": "0.1.0",
+  "description": "Registers the core platform identity, status route, permission and health contribution.",
+  "dependencies": [],
+  "optionalDependencies": [],
+  "permissions": [
+    "platform.status.read"
+  ],
+  "capabilities": [
+    "platform.identity",
+    "platform.status"
+  ]
+}
