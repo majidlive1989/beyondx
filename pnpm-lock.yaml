@@ -78,6 +78,9 @@ importers:
       '@beyondx/logger':
         specifier: workspace:*
         version: link:../../packages/logger
+      '@beyondx/module-catalog':
+        specifier: workspace:*
+        version: link:../../modules/catalog
       '@beyondx/module-content':
         specifier: workspace:*
         version: link:../../modules/content
@@ -90,6 +93,9 @@ importers:
       '@beyondx/module-media':
         specifier: workspace:*
         version: link:../../modules/media
+      '@beyondx/module-schema':
+        specifier: workspace:*
+        version: link:../../modules/schema
       '@beyondx/module-system':
         specifier: workspace:*
         version: link:../../packages/module-system
@@ -123,6 +129,28 @@ importers:
       pino:
         specifier: 9.9.0
         version: 9.9.0
+      zod:
+        specifier: 3.25.76
+        version: 3.25.76
+    devDependencies:
+      '@beyondx/testing':
+        specifier: workspace:*
+        version: link:../../packages/testing
+
+  modules/catalog:
+    dependencies:
+      '@beyondx/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+      '@beyondx/database':
+        specifier: workspace:*
+        version: link:../../packages/database
+      '@beyondx/module-schema':
+        specifier: workspace:*
+        version: link:../schema
+      '@beyondx/validation':
+        specifier: workspace:*
+        version: link:../../packages/validation
       zod:
         specifier: 3.25.76
         version: 3.25.76
@@ -186,6 +214,25 @@ importers:
         version: link:../../packages/testing
 
   modules/media:
+    dependencies:
+      '@beyondx/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+      '@beyondx/database':
+        specifier: workspace:*
+        version: link:../../packages/database
+      '@beyondx/validation':
+        specifier: workspace:*
+        version: link:../../packages/validation
+      zod:
+        specifier: 3.25.76
+        version: 3.25.76
+    devDependencies:
+      '@beyondx/testing':
+        specifier: workspace:*
+        version: link:../../packages/testing
+
+  modules/schema:
     dependencies:
       '@beyondx/core':
         specifier: workspace:*

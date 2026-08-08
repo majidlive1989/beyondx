@@ -9,10 +9,14 @@ Business capabilities live in independent workspace packages under this director
 
 Every module contains a package manifest, `module.json`, TypeScript configuration, layered source code and real tests.
 
-## Phase 2 module
+## CMS groundwork for Phase 6
 
-`@beyondx/module-content` owns CMS domain logic, persistence adapters, permissions, routes, revisions and scheduled publishing. `apps/api` only registers the module; `apps/admin` only consumes its HTTP API.
+`@beyondx/module-content` is retained from earlier development as isolated Phase 6 groundwork. It is not part of the Phase 2 Media dependency chain.
 
 ## Phase 2 Media Module
 
 `@beyondx/module-media` owns media metadata, secure upload validation, storage adapters and image inspection. The existing `@beyondx/module-content` package is retained as Phase 6 groundwork and is not a dependency of Media.
+
+## Phase 3 Catalog Module
+
+`@beyondx/module-catalog` owns products, variants, globally unique SKUs, brands, category hierarchy, attributes/values and product-to-media relationships. It depends on the Media Module for reusable image assets but deliberately excludes inventory, cart, checkout and orders, which belong to Phase 4 Commerce.

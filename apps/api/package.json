@@ -1,6 +1,6 @@
 {
   "name": "@beyondx/api",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -33,7 +33,9 @@
     "@beyondx/module-identity": "workspace:*",
     "@beyondx/module-content": "workspace:*",
     "@beyondx/module-media": "workspace:*",
-    "@fastify/multipart": "10.1.0"
+    "@fastify/multipart": "10.1.0",
+    "@beyondx/module-catalog": "workspace:*",
+    "@beyondx/module-schema": "workspace:*"
   },
   "devDependencies": {
     "@beyondx/testing": "workspace:*"

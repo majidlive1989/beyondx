@@ -148,3 +148,141 @@ export interface MediaAsset {
   createdAt: string;
   updatedAt: string;
 }
+
+export type CatalogProductStatus = "DRAFT" | "ACTIVE" | "ARCHIVED";
+export type CatalogVariantStatus = "ACTIVE" | "DISABLED";
+
+export interface CatalogBrand {
+  id: string;
+  name: string;
+  slug: string;
+  description: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CatalogCategory {
+  id: string;
+  name: string;
+  slug: string;
+  description: string | null;
+  parentId: string | null;
+  position: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CatalogAttributeValue {
+  id: string;
+  attributeId: string;
+  value: string;
+  slug: string;
+  position: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CatalogAttribute {
+  id: string;
+  name: string;
+  slug: string;
+  position: number;
+  values: CatalogAttributeValue[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CatalogVariantAttributeSelection {
+  attributeId: string;
+  attributeName: string;
+  attributeSlug: string;
+  valueId: string;
+  value: string;
+  valueSlug: string;
+}
+
+export interface CatalogProductMedia {
+  id: string;
+  originalName: string;
+  mimeType: string;
+  width: number | null;
+  height: number | null;
+  altText: string | null;
+  title: string | null;
+  position: number;
+}
+
+export interface CatalogProductVariant {
+  id: string;
+  productId: string;
+  title: string;
+  sku: string;
+  status: CatalogVariantStatus;
+  position: number;
+  attributes: CatalogVariantAttributeSelection[];
+  customFields: Record<string, unknown>;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CatalogProduct {
+  id: string;
+  name: string;
+  slug: string;
+  description: string | null;
+  status: CatalogProductStatus;
+  brandId: string | null;
+  brand: CatalogBrand | null;
+  categories: CatalogCategory[];
+  media: CatalogProductMedia[];
+  variants: CatalogProductVariant[];
+  customFields: Record<string, unknown>;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type DataSchemaKind = "COLLECTION" | "SINGLE" | "COMPONENT" | "SYSTEM_EXTENSION";
+export type DataFieldType = "TEXT" | "LONG_TEXT" | "RICH_TEXT" | "UID" | "NUMBER" | "BOOLEAN" | "DATE" | "JSON" | "ENUM" | "MEDIA" | "RELATION" | "COMPONENT" | "DYNAMIC_ZONE";
+export type DataRecordStatus = "DRAFT" | "ACTIVE" | "ARCHIVED";
+
+export interface DataFieldDefinition {
+  id: string;
+  schemaId: string;
+  key: string;
+  label: string;
+  type: DataFieldType;
+  required: boolean;
+  repeatable: boolean;
+  position: number;
+  validation: Record<string, unknown> | null;
+  settings: Record<string, unknown> | null;
+  relationTargetSchemaId: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface DataSchemaDefinition {
+  id: string;
+  key: string;
+  displayName: string;
+  pluralName: string;
+  description: string | null;
+  kind: DataSchemaKind;
+  publicRead: boolean;
+  system: boolean;
+  fields: DataFieldDefinition[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface DynamicDataRecord {
+  id: string;
+  schemaId: string;
+  schemaKey: string;
+  status: DataRecordStatus;
+  values: Record<string, unknown>;
+  createdById: string | null;
+  updatedById: string | null;
+  createdAt: string;
+  updatedAt: string;
+}

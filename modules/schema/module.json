@@ -1,0 +1,23 @@
+{
+  "name": "@beyondx/module-schema",
+  "displayName": "Schema Engine",
+  "version": "0.4.0",
+  "description": "Strapi-style schema builder, generated data APIs and dynamic system-entity extensions",
+  "dependencies": ["@beyondx/module-foundation", "@beyondx/module-identity", "@beyondx/module-media"],
+  "optionalDependencies": [],
+  "permissions": [
+    "schema.builder.read",
+    "schema.builder.manage",
+    "schema.records.read",
+    "schema.records.create",
+    "schema.records.update",
+    "schema.records.delete"
+  ],
+  "capabilities": [
+    "schema.builder",
+    "schema.dynamic-records",
+    "schema.generated-admin",
+    "schema.generated-api",
+    "schema.system-extensions"
+  ]
+}

@@ -1,0 +1,33 @@
+{
+  "name": "@beyondx/module-catalog",
+  "displayName": "Catalog Module",
+  "version": "0.4.0",
+  "description": "Products, variants and taxonomy with schema-driven custom fields",
+  "dependencies": [
+    "@beyondx/module-foundation",
+    "@beyondx/module-identity",
+    "@beyondx/module-media",
+    "@beyondx/module-schema"
+  ],
+  "optionalDependencies": [],
+  "permissions": [
+    "catalog.products.read",
+    "catalog.products.create",
+    "catalog.products.update",
+    "catalog.products.delete",
+    "catalog.variants.manage",
+    "catalog.categories.manage",
+    "catalog.brands.manage",
+    "catalog.attributes.manage"
+  ],
+  "capabilities": [
+    "catalog.products",
+    "catalog.variants",
+    "catalog.sku",
+    "catalog.categories",
+    "catalog.brands",
+    "catalog.attributes",
+    "catalog.media",
+    "catalog.dynamic-fields"
+  ]
+}

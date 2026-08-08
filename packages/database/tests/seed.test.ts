@@ -18,6 +18,7 @@ function createSeedClient(): {
   state: {
     modules: Set<string>;
     permissions: Set<string>;
+    schemas: Set<string>;
     roles: Map<string, RoleRecord>;
     users: Map<string, UserRecord>;
     userRoles: Set<string>;
@@ -28,6 +29,7 @@ function createSeedClient(): {
   const state = {
     modules: new Set<string>(),
     permissions: new Set<string>(),
+    schemas: new Set<string>(),
     roles: new Map<string, RoleRecord>(),
     users: new Map<string, UserRecord>(),
     userRoles: new Set<string>(),
@@ -49,6 +51,12 @@ function createSeedClient(): {
       upsert: (input: { where: { id: string } }) => {
         state.permissions.add(input.where.id);
         return Promise.resolve({ id: input.where.id });
+      },
+    },
+    dataSchema: {
+      upsert: (input: { where: { key: string } }) => {
+        state.schemas.add(input.where.key);
+        return Promise.resolve({ id: input.where.key, key: input.where.key });
       },
     },
     role: {
@@ -105,15 +113,16 @@ const environment = {
   PASSWORD_SALT_ROUNDS: "10",
 };
 
-describe("Phase 2 database seed", () => {
+describe("Phase 3 database seed", () => {
   it("is idempotent across repeated runs", async () => {
     const { client, state } = createSeedClient();
 
     await seedDatabase(client, environment);
     await seedDatabase(client, environment);
 
-    expect(state.modules.size).toBe(7);
-    expect(state.permissions.size).toBe(29);
+    expect(state.modules.size).toBe(9);
+    expect(state.permissions.size).toBe(43);
+    expect(state.schemas.size).toBe(2);
     expect(state.roles.size).toBe(3);
     expect(state.users.size).toBe(1);
     expect(state.userRoles.size).toBe(1);

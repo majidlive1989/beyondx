@@ -1,15 +1,48 @@
+## Phase 3 Platform Builder v2
+
+- Added reusable COMPONENT schema kind.
+- Added RICH_TEXT, UID, COMPONENT and DYNAMIC_ZONE field types.
+- Added nested validation, component cycle protection and UID uniqueness.
+- Added generated nested Admin forms and dynamic-zone block editor.
+- Added component/dynamic-zone rendering for Catalog schema-driven custom fields.
+
+## 0.4.1 - 2026-08-07
+
+### Added
+
+- Added the shared `@beyondx/module-schema` engine with Collection, Single and protected System Extension schema kinds.
+- Added a Strapi-style `/builder` Admin surface and generated `/data/{schemaKey}` record managers.
+- Added generated dynamic data APIs, schema RBAC, audit logging, Media/Relation field validation and system-schema bootstrapping.
+- Extended Catalog Product and Variant with schema-driven custom fields that require no Catalog code changes.
+- Added Product/Variant system extension schemas and Media Library selectors for dynamic Media fields.
+
+### Changed
+
+- Phase 3 is now **Schema Engine + Catalog Builder** so Strapi-style extensibility starts before Commerce.
+- Phase 6 CMS will reuse the shared Schema Engine for higher-level content workflows rather than creating a separate modeling core.
+
 # Changelog
 
-## 0.3.0 — Phase 2 CMS and Content
+## 0.4.0 — Phase 3 Catalog Module
 
-- Added modular `@beyondx/module-content` CMS.
-- Added ContentType, FieldDefinition, ContentEntry, ContentRevision and EntryRelation persistence.
-- Added Draft / Published / Archived lifecycle and revision history.
-- Added locale, slug and SEO metadata support.
-- Added entry relations and scheduled publishing.
-- Added protected CMS administration APIs and public published-content APIs.
-- Added CMS RBAC permissions and idempotent seed updates.
-- Added mobile-first Content and Content Types Admin pages.
+- Added modular `@beyondx/module-catalog`.
+- Added Product, ProductVariant, Brand, Category, CatalogAttribute and AttributeValue persistence.
+- Added globally unique normalized SKUs and variant attribute selections.
+- Added product-to-category and product-to-Media relationships.
+- Added protected Catalog Admin APIs and public active-product APIs.
+- Added catalog RBAC permissions, audit logging and idempotent seed updates.
+- Added mobile-first `/catalog` and `/catalog/taxonomy` Admin interfaces.
+- Added Phase 3 migration, tests and `verify:phase3`.
+- Kept Inventory, Cart, Checkout and Orders out of Catalog for Phase 4 Commerce.
+
+## 0.3.0 — Phase 2 Media Module
+
+- Added modular `@beyondx/module-media`.
+- Added secure multipart uploads, MIME signature validation and file-size enforcement.
+- Added pluggable local storage, persistent Media metadata and image dimension inspection.
+- Added Media Library CRUD/content APIs, RBAC permissions, audit logs and mobile-first Admin UI.
+- Added Media migration, tests and `verify:phase2`.
+- Retained previously developed `@beyondx/module-content` as isolated groundwork for formal Phase 6 completion.
 - Converted the Admin shell to mobile-first off-canvas navigation.
 - Added mobile card layouts for users, sessions and audit history.
 - Added Phase 2 migration, tests and `verify:phase2`.

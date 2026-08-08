@@ -64,7 +64,7 @@ export async function createApp(
         info: {
           title: "BeyondX API",
           description: "API-first modular digital product platform",
-          version: "0.3.0",
+          version: "0.4.0",
         },
         // Keep the OpenAPI server relative so Scalar Try It uses the same origin
         // that served /docs (localhost, 127.0.0.1, reverse proxy, etc.).
@@ -86,6 +86,8 @@ export async function createApp(
           { name: "Content", description: "Published content delivery" },
           { name: "Content Admin", description: "CMS content types, entries and revisions" },
           { name: "Media", description: "Media library, uploads, storage and image management" },
+          { name: "Catalog", description: "Public product catalog delivery" },
+          { name: "Catalog Admin", description: "Products, variants, SKUs, brands, categories and attributes" },
         ],
       },
     });

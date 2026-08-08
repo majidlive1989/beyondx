@@ -84,4 +84,20 @@ pnpm db:seed
 pnpm verify:phase2
 ```
 
-CMS Admin: `http://127.0.0.1:3000/content` and `http://127.0.0.1:3000/content-types`.
+Media Admin: `http://127.0.0.1:3000/media`. CMS groundwork remains available for later Phase 6 completion.
+
+
+## Phase 3 Catalog upgrade
+
+```powershell
+pnpm install --no-frozen-lockfile
+pnpm db:generate
+pnpm db:migrate
+pnpm db:seed
+pnpm lint
+pnpm typecheck
+pnpm test
+pnpm build
+```
+
+Then temporarily move `.env` and run `pnpm verify:phase3`. Catalog Admin: `http://127.0.0.1:3000/catalog`.

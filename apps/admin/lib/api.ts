@@ -4,11 +4,24 @@ import type {
   AdminUser,
   AuditLog,
   AuthResponse,
+  CatalogAttribute,
+  CatalogAttributeValue,
+  CatalogBrand,
+  CatalogCategory,
+  CatalogProduct,
+  CatalogProductStatus,
+  CatalogProductVariant,
+  CatalogVariantStatus,
   ContentEntry,
   ContentEntryStatus,
   ContentFieldInput,
   ContentRevision,
   ContentType,
+  DataFieldDefinition,
+  DataRecordStatus,
+  DataSchemaDefinition,
+  DataSchemaKind,
+  DynamicDataRecord,
   MediaAsset,
   Page,
   Permission,
@@ -22,6 +35,7 @@ export class ApiError extends Error {
     message: string,
     readonly code: string,
     readonly status: number,
+    readonly details?: unknown,
   ) {
     super(message);
     this.name = "ApiError";
@@ -65,16 +79,31 @@ async function request<T>(
 
   if (!response.ok) {
     const payload = (await response.json().catch(() => null)) as
-      | { error?: { code?: string; message?: string } }
+      | { error?: { code?: string; message?: string; details?: unknown } }
       | null;
+    const baseMessage = payload?.error?.message ?? `Request failed with HTTP ${response.status}`;
+    const issueMessage = firstValidationIssue(payload?.error?.details);
     throw new ApiError(
-      payload?.error?.message ?? `Request failed with HTTP ${response.status}`,
+      issueMessage ? `${baseMessage}: ${issueMessage}` : baseMessage,
       payload?.error?.code ?? "HTTP_REQUEST_FAILED",
       response.status,
+      payload?.error?.details,
     );
   }
   if (response.status === 204) return undefined as T;
   return response.json() as Promise<T>;
+}
+
+
+function firstValidationIssue(details: unknown): string | null {
+  if (!details || typeof details !== "object" || !("issues" in details)) return null;
+  const issues = (details as { issues?: unknown }).issues;
+  if (!Array.isArray(issues) || issues.length === 0) return null;
+  const first: unknown = issues[0];
+  if (!first || typeof first !== "object") return null;
+  const path = "path" in first && typeof first.path === "string" ? first.path : "";
+  const message = "message" in first && typeof first.message === "string" ? first.message : "Invalid value";
+  return path ? `${path} — ${message}` : message;
 }
 
 export async function login(email: string, password: string): Promise<AuthResponse> {
@@ -409,13 +438,175 @@ export async function fetchMediaContent(id: string): Promise<Blob> {
   });
   if (!response.ok) {
     const payload = (await response.json().catch(() => null)) as
-      | { error?: { code?: string; message?: string } }
+      | { error?: { code?: string; message?: string; details?: unknown } }
       | null;
+    const baseMessage = payload?.error?.message ?? `Request failed with HTTP ${response.status}`;
+    const issueMessage = firstValidationIssue(payload?.error?.details);
     throw new ApiError(
-      payload?.error?.message ?? `Request failed with HTTP ${response.status}`,
+      issueMessage ? `${baseMessage}: ${issueMessage}` : baseMessage,
       payload?.error?.code ?? "HTTP_REQUEST_FAILED",
       response.status,
+      payload?.error?.details,
     );
   }
   return response.blob();
+}
+
+export function listCatalogBrands(): Promise<{ items: CatalogBrand[] }> {
+  return request<{ items: CatalogBrand[] }>("/api/v1/admin/catalog/brands");
+}
+
+export async function createCatalogBrand(input: { name: string; slug: string; description?: string | null }): Promise<CatalogBrand> {
+  return (await request<{ brand: CatalogBrand }>("/api/v1/admin/catalog/brands", { method: "POST", body: JSON.stringify(input) })).brand;
+}
+
+export async function updateCatalogBrand(id: string, input: { name?: string; slug?: string; description?: string | null }): Promise<CatalogBrand> {
+  return (await request<{ brand: CatalogBrand }>(`/api/v1/admin/catalog/brands/${id}`, { method: "PATCH", body: JSON.stringify(input) })).brand;
+}
+
+export function deleteCatalogBrand(id: string): Promise<void> {
+  return request<void>(`/api/v1/admin/catalog/brands/${id}`, { method: "DELETE" });
+}
+
+export function listCatalogCategories(): Promise<{ items: CatalogCategory[] }> {
+  return request<{ items: CatalogCategory[] }>("/api/v1/admin/catalog/categories");
+}
+
+export async function createCatalogCategory(input: { name: string; slug: string; description?: string | null; parentId?: string | null; position?: number }): Promise<CatalogCategory> {
+  return (await request<{ category: CatalogCategory }>("/api/v1/admin/catalog/categories", { method: "POST", body: JSON.stringify(input) })).category;
+}
+
+export async function updateCatalogCategory(id: string, input: { name?: string; slug?: string; description?: string | null; parentId?: string | null; position?: number }): Promise<CatalogCategory> {
+  return (await request<{ category: CatalogCategory }>(`/api/v1/admin/catalog/categories/${id}`, { method: "PATCH", body: JSON.stringify(input) })).category;
+}
+
+export function deleteCatalogCategory(id: string): Promise<void> {
+  return request<void>(`/api/v1/admin/catalog/categories/${id}`, { method: "DELETE" });
+}
+
+export function listCatalogAttributes(): Promise<{ items: CatalogAttribute[] }> {
+  return request<{ items: CatalogAttribute[] }>("/api/v1/admin/catalog/attributes");
+}
+
+export async function createCatalogAttribute(input: { name: string; slug: string; position?: number }): Promise<CatalogAttribute> {
+  return (await request<{ attribute: CatalogAttribute }>("/api/v1/admin/catalog/attributes", { method: "POST", body: JSON.stringify(input) })).attribute;
+}
+
+export async function updateCatalogAttribute(id: string, input: { name?: string; slug?: string; position?: number }): Promise<CatalogAttribute> {
+  return (await request<{ attribute: CatalogAttribute }>(`/api/v1/admin/catalog/attributes/${id}`, { method: "PATCH", body: JSON.stringify(input) })).attribute;
+}
+
+export function deleteCatalogAttribute(id: string): Promise<void> {
+  return request<void>(`/api/v1/admin/catalog/attributes/${id}`, { method: "DELETE" });
+}
+
+export async function createCatalogAttributeValue(attributeId: string, input: { value: string; slug: string; position?: number }): Promise<CatalogAttributeValue> {
+  return (await request<{ value: CatalogAttributeValue }>(`/api/v1/admin/catalog/attributes/${attributeId}/values`, { method: "POST", body: JSON.stringify(input) })).value;
+}
+
+export async function updateCatalogAttributeValue(id: string, input: { value?: string; slug?: string; position?: number }): Promise<CatalogAttributeValue> {
+  return (await request<{ value: CatalogAttributeValue }>(`/api/v1/admin/catalog/attribute-values/${id}`, { method: "PATCH", body: JSON.stringify(input) })).value;
+}
+
+export function deleteCatalogAttributeValue(id: string): Promise<void> {
+  return request<void>(`/api/v1/admin/catalog/attribute-values/${id}`, { method: "DELETE" });
+}
+
+export function getCatalogCustomFieldSchemas(): Promise<{
+  productSchema: DataSchemaDefinition | null;
+  variantSchema: DataSchemaDefinition | null;
+  componentSchemas: DataSchemaDefinition[];
+}> {
+  return request<{
+    productSchema: DataSchemaDefinition | null;
+    variantSchema: DataSchemaDefinition | null;
+    componentSchemas: DataSchemaDefinition[];
+  }>("/api/v1/admin/catalog/custom-fields");
+}
+
+export function listCatalogProducts(input: { search?: string; status?: CatalogProductStatus; brandId?: string; categoryId?: string; page?: number; pageSize?: number } = {}): Promise<Page<CatalogProduct>> {
+  const query = new URLSearchParams({ page: String(input.page ?? 1), pageSize: String(input.pageSize ?? 30) });
+  if (input.search) query.set("search", input.search);
+  if (input.status) query.set("status", input.status);
+  if (input.brandId) query.set("brandId", input.brandId);
+  if (input.categoryId) query.set("categoryId", input.categoryId);
+  return request<Page<CatalogProduct>>(`/api/v1/admin/catalog/products?${query}`);
+}
+
+export async function getCatalogProduct(id: string): Promise<CatalogProduct> {
+  return (await request<{ product: CatalogProduct }>(`/api/v1/admin/catalog/products/${id}`)).product;
+}
+
+export async function createCatalogProduct(input: { name: string; slug: string; description?: string | null; status?: CatalogProductStatus; brandId?: string | null; categoryIds?: string[]; mediaAssetIds?: string[]; customFields?: Record<string, unknown> }): Promise<CatalogProduct> {
+  return (await request<{ product: CatalogProduct }>("/api/v1/admin/catalog/products", { method: "POST", body: JSON.stringify(input) })).product;
+}
+
+export async function updateCatalogProduct(id: string, input: { name?: string; slug?: string; description?: string | null; status?: CatalogProductStatus; brandId?: string | null; categoryIds?: string[]; mediaAssetIds?: string[]; customFields?: Record<string, unknown> }): Promise<CatalogProduct> {
+  return (await request<{ product: CatalogProduct }>(`/api/v1/admin/catalog/products/${id}`, { method: "PATCH", body: JSON.stringify(input) })).product;
+}
+
+export function deleteCatalogProduct(id: string): Promise<void> {
+  return request<void>(`/api/v1/admin/catalog/products/${id}`, { method: "DELETE" });
+}
+
+export async function createCatalogVariant(productId: string, input: { title: string; sku: string; status?: CatalogVariantStatus; position?: number; attributeValueIds?: string[]; customFields?: Record<string, unknown> }): Promise<CatalogProductVariant> {
+  return (await request<{ variant: CatalogProductVariant }>(`/api/v1/admin/catalog/products/${productId}/variants`, { method: "POST", body: JSON.stringify(input) })).variant;
+}
+
+export async function updateCatalogVariant(id: string, input: { title?: string; sku?: string; status?: CatalogVariantStatus; position?: number; attributeValueIds?: string[]; customFields?: Record<string, unknown> }): Promise<CatalogProductVariant> {
+  return (await request<{ variant: CatalogProductVariant }>(`/api/v1/admin/catalog/variants/${id}`, { method: "PATCH", body: JSON.stringify(input) })).variant;
+}
+
+export function deleteCatalogVariant(id: string): Promise<void> {
+  return request<void>(`/api/v1/admin/catalog/variants/${id}`, { method: "DELETE" });
+}
+
+export function listDataSchemas(): Promise<{ items: DataSchemaDefinition[] }> {
+  return request<{ items: DataSchemaDefinition[] }>("/api/v1/admin/schemas");
+}
+
+export function listRuntimeDataSchemas(): Promise<{ items: DataSchemaDefinition[] }> {
+  return request<{ items: DataSchemaDefinition[] }>("/api/v1/admin/runtime-schemas");
+}
+
+export async function createDataSchema(input: { key: string; displayName: string; pluralName: string; description?: string | null; kind?: Exclude<DataSchemaKind, "SYSTEM_EXTENSION">; publicRead?: boolean }): Promise<DataSchemaDefinition> {
+  return (await request<{ schema: DataSchemaDefinition }>("/api/v1/admin/schemas", { method: "POST", body: JSON.stringify(input) })).schema;
+}
+
+export async function updateDataSchema(id: string, input: { displayName?: string; pluralName?: string; description?: string | null; publicRead?: boolean }): Promise<DataSchemaDefinition> {
+  return (await request<{ schema: DataSchemaDefinition }>(`/api/v1/admin/schemas/${id}`, { method: "PATCH", body: JSON.stringify(input) })).schema;
+}
+
+export function deleteDataSchema(id: string): Promise<void> {
+  return request<void>(`/api/v1/admin/schemas/${id}`, { method: "DELETE" });
+}
+
+export async function createDataField(schemaId: string, input: { key: string; label: string; type: DataFieldDefinition["type"]; required?: boolean; repeatable?: boolean; position?: number; validation?: Record<string, unknown> | null; settings?: Record<string, unknown> | null; relationTargetSchemaId?: string | null }): Promise<DataSchemaDefinition> {
+  return (await request<{ schema: DataSchemaDefinition }>(`/api/v1/admin/schemas/${schemaId}/fields`, { method: "POST", body: JSON.stringify(input) })).schema;
+}
+
+export async function updateDataField(id: string, input: { label?: string; required?: boolean; repeatable?: boolean; position?: number; validation?: Record<string, unknown> | null; settings?: Record<string, unknown> | null; relationTargetSchemaId?: string | null }): Promise<DataSchemaDefinition> {
+  return (await request<{ schema: DataSchemaDefinition }>(`/api/v1/admin/schema-fields/${id}`, { method: "PATCH", body: JSON.stringify(input) })).schema;
+}
+
+export async function deleteDataField(id: string): Promise<DataSchemaDefinition> {
+  return (await request<{ schema: DataSchemaDefinition }>(`/api/v1/admin/schema-fields/${id}`, { method: "DELETE" })).schema;
+}
+
+export function listDynamicRecords(schemaKey: string, input: { page?: number; pageSize?: number; status?: DataRecordStatus } = {}): Promise<Page<DynamicDataRecord>> {
+  const query = new URLSearchParams({ page: String(input.page ?? 1), pageSize: String(input.pageSize ?? 30) });
+  if (input.status) query.set("status", input.status);
+  return request<Page<DynamicDataRecord>>(`/api/v1/admin/data/${encodeURIComponent(schemaKey)}?${query}`);
+}
+
+export async function createDynamicRecord(schemaKey: string, input: { status?: DataRecordStatus; values: Record<string, unknown> }): Promise<DynamicDataRecord> {
+  return (await request<{ record: DynamicDataRecord }>(`/api/v1/admin/data/${encodeURIComponent(schemaKey)}`, { method: "POST", body: JSON.stringify(input) })).record;
+}
+
+export async function updateDynamicRecord(schemaKey: string, id: string, input: { status?: DataRecordStatus; values?: Record<string, unknown> }): Promise<DynamicDataRecord> {
+  return (await request<{ record: DynamicDataRecord }>(`/api/v1/admin/data/${encodeURIComponent(schemaKey)}/${id}`, { method: "PATCH", body: JSON.stringify(input) })).record;
+}
+
+export function deleteDynamicRecord(schemaKey: string, id: string): Promise<void> {
+  return request<void>(`/api/v1/admin/data/${encodeURIComponent(schemaKey)}/${id}`, { method: "DELETE" });
 }

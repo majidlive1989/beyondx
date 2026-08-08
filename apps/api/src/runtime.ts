@@ -19,6 +19,8 @@ import { FoundationModule } from "@beyondx/module-foundation";
 import { IdentityModule } from "@beyondx/module-identity";
 import { ContentModule } from "@beyondx/module-content";
 import { MediaModule } from "@beyondx/module-media";
+import { CatalogModule } from "@beyondx/module-catalog";
+import { SchemaModule } from "@beyondx/module-schema";
 import { Redis } from "ioredis";
 import type { ApplicationDependencies } from "./types.js";
 
@@ -108,6 +110,8 @@ export async function createRuntimeDependencies(): Promise<ApplicationDependenci
       allowedMimeTypes: config.MEDIA_ALLOWED_MIME_TYPES,
     }),
   );
+  registry.register(new SchemaModule({ database }));
+  registry.register(new CatalogModule({ database }));
   const kernel = await registry.createKernel({
     services,
     events,

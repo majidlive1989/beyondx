@@ -318,9 +318,258 @@ model MediaAsset {
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
   uploadedBy       User?     @relation("MediaUploader", fields: [uploadedByUserId], references: [id], onDelete: SetNull)
+  productMedia     ProductMedia[]
 
   @@index([kind, createdAt])
   @@index([mimeType])
   @@index([uploadedByUserId, createdAt])
   @@map("media_assets")
+}
+
+enum ProductStatus {
+  DRAFT
+  ACTIVE
+  ARCHIVED
+}
+
+enum ProductVariantStatus {
+  ACTIVE
+  DISABLED
+}
+
+model Brand {
+  id          String    @id @default(cuid())
+  name        String    @unique
+  slug        String    @unique
+  description String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  products    Product[]
+
+  @@index([name])
+  @@map("catalog_brands")
+}
+
+model Category {
+  id          String            @id @default(cuid())
+  name        String
+  slug        String            @unique
+  description String?
+  parentId    String?
+  position    Int               @default(0)
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  parent      Category?         @relation("CategoryTree", fields: [parentId], references: [id], onDelete: SetNull)
+  children    Category[]        @relation("CategoryTree")
+  products    ProductCategory[]
+
+  @@index([parentId, position])
+  @@index([name])
+  @@map("catalog_categories")
+}
+
+model CatalogAttribute {
+  id        String           @id @default(cuid())
+  name      String
+  slug      String           @unique
+  position  Int              @default(0)
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+  values    AttributeValue[]
+  variants  VariantAttributeValue[]
+
+  @@index([position, name])
+  @@map("catalog_attributes")
+}
+
+model AttributeValue {
+  id          String                  @id @default(cuid())
+  attributeId String
+  value       String
+  slug        String
+  position    Int                     @default(0)
+  createdAt   DateTime                @default(now())
+  updatedAt   DateTime                @updatedAt
+  attribute   CatalogAttribute        @relation(fields: [attributeId], references: [id], onDelete: Cascade)
+  variants    VariantAttributeValue[]
+
+  @@unique([attributeId, slug])
+  @@index([attributeId, position])
+  @@map("catalog_attribute_values")
+}
+
+model Product {
+  id          String            @id @default(cuid())
+  name        String
+  slug        String            @unique
+  description String?
+  status      ProductStatus     @default(DRAFT)
+  brandId     String?
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  brand       Brand?            @relation(fields: [brandId], references: [id], onDelete: SetNull)
+  categories  ProductCategory[]
+  variants    ProductVariant[]
+  media       ProductMedia[]
+
+  @@index([status, updatedAt])
+  @@index([brandId, status])
+  @@index([name])
+  @@map("catalog_products")
+}
+
+model ProductCategory {
+  productId  String
+  categoryId String
+  position   Int      @default(0)
+  product    Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@id([productId, categoryId])
+  @@index([categoryId, productId])
+  @@map("catalog_product_categories")
+}
+
+model ProductVariant {
+  id              String                  @id @default(cuid())
+  productId       String
+  title           String
+  sku             String                  @unique
+  status          ProductVariantStatus    @default(ACTIVE)
+  position        Int                     @default(0)
+  createdAt       DateTime                @default(now())
+  updatedAt       DateTime                @updatedAt
+  product         Product                 @relation(fields: [productId], references: [id], onDelete: Cascade)
+  attributeValues VariantAttributeValue[]
+
+  @@index([productId, position])
+  @@index([productId, status])
+  @@map("catalog_product_variants")
+}
+
+model VariantAttributeValue {
+  variantId       String
+  attributeId     String
+  attributeValueId String
+  variant         ProductVariant  @relation(fields: [variantId], references: [id], onDelete: Cascade)
+  attribute       CatalogAttribute @relation(fields: [attributeId], references: [id], onDelete: Restrict)
+  attributeValue  AttributeValue   @relation(fields: [attributeValueId], references: [id], onDelete: Restrict)
+
+  @@id([variantId, attributeId])
+  @@unique([variantId, attributeValueId])
+  @@index([attributeValueId])
+  @@map("catalog_variant_attribute_values")
+}
+
+model ProductMedia {
+  productId    String
+  mediaAssetId String
+  position     Int        @default(0)
+  product      Product    @relation(fields: [productId], references: [id], onDelete: Cascade)
+  mediaAsset   MediaAsset @relation(fields: [mediaAssetId], references: [id], onDelete: Cascade)
+
+  @@id([productId, mediaAssetId])
+  @@index([mediaAssetId])
+  @@index([productId, position])
+  @@map("catalog_product_media")
+}
+
+enum DataSchemaKind {
+  COLLECTION
+  SINGLE
+  COMPONENT
+  SYSTEM_EXTENSION
+}
+
+enum DataFieldType {
+  TEXT
+  LONG_TEXT
+  RICH_TEXT
+  UID
+  NUMBER
+  BOOLEAN
+  DATE
+  JSON
+  ENUM
+  MEDIA
+  RELATION
+  COMPONENT
+  DYNAMIC_ZONE
+}
+
+enum DataRecordStatus {
+  DRAFT
+  ACTIVE
+  ARCHIVED
+}
+
+model DataSchema {
+  id          String             @id @default(cuid())
+  key         String             @unique
+  displayName String
+  pluralName  String
+  description String?
+  kind        DataSchemaKind
+  publicRead  Boolean            @default(false)
+  system      Boolean            @default(false)
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+  fields      DataField[]
+  records     DataRecord[]
+  extensions EntityExtension[]
+
+  @@index([kind, displayName])
+  @@map("data_schemas")
+}
+
+model DataField {
+  id                     String        @id @default(cuid())
+  schemaId               String
+  key                    String
+  label                  String
+  type                   DataFieldType
+  required               Boolean       @default(false)
+  repeatable             Boolean       @default(false)
+  position               Int           @default(0)
+  validation             Json?
+  settings               Json?
+  relationTargetSchemaId String?
+  createdAt              DateTime      @default(now())
+  updatedAt              DateTime      @updatedAt
+  schema                  DataSchema    @relation(fields: [schemaId], references: [id], onDelete: Cascade)
+
+  @@unique([schemaId, key])
+  @@index([schemaId, position])
+  @@index([relationTargetSchemaId])
+  @@map("data_fields")
+}
+
+model DataRecord {
+  id          String           @id @default(cuid())
+  schemaId    String
+  status      DataRecordStatus @default(DRAFT)
+  values      Json
+  createdById String?
+  updatedById String?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  schema      DataSchema       @relation(fields: [schemaId], references: [id], onDelete: Cascade)
+
+  @@index([schemaId, status, updatedAt])
+  @@map("data_records")
+}
+
+model EntityExtension {
+  id         String     @id @default(cuid())
+  schemaId   String
+  targetType String
+  targetId   String
+  values     Json
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+  schema     DataSchema @relation(fields: [schemaId], references: [id], onDelete: Cascade)
+
+  @@unique([schemaId, targetType, targetId])
+  @@index([targetType, targetId])
+  @@map("entity_extensions")
 }
