@@ -1,10 +1,21 @@
 {
   "name": "@beyondx/module-plugin-manager",
   "displayName": "Plugin Manager",
-  "version": "0.4.0",
-  "description": "Install, enable and disable BeyondX plugins",
-  "dependencies": ["@beyondx/module-foundation", "@beyondx/module-identity"],
+  "version": "0.5.0",
+  "description": "Install, enable and disable BeyondX plugins with hot lifecycle",
+  "dependencies": [
+    "@beyondx/module-foundation",
+    "@beyondx/module-identity"
+  ],
   "optionalDependencies": [],
-  "permissions": ["plugins.read", "plugins.manage"],
-  "capabilities": ["plugins.registry", "plugins.lifecycle", "plugins.admin-navigation"]
+  "permissions": [
+    "plugins.read",
+    "plugins.manage"
+  ],
+  "capabilities": [
+    "plugins.registry",
+    "plugins.lifecycle",
+    "plugins.hot-lifecycle",
+    "plugins.admin-navigation"
+  ]
 }

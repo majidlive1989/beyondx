@@ -1,35 +1,29 @@
-# BeyondX Phase 3 — Plugin Runtime + Catalog Plugin Overlay
+# BeyondX Phase 4 — Commerce Plugin + Hot Plugin Lifecycle
 
-Apply this overlay to the current Phase 3 project root. It converts Catalog from a hard-coded runtime module into the first installable BeyondX plugin.
+This cumulative overlay applies over the verified Phase 3 project.
 
-## What changes
+## Phase 4 goals
 
-- Adds a generic Plugin Registry and Plugin Runtime to `@beyondx/module-system`.
-- Adds the always-on Plugin Manager core module.
-- Adds `plugins/catalog` as the first-party Catalog plugin manifest/factory.
-- API loads Catalog only when its plugin installation is enabled at startup.
-- Admin navigation is contributed by active plugins; Catalog links are no longer hard-coded.
-- Adds `Settings -> Plugins` with Install / Enable / Disable / Uninstall.
-- Disable preserves plugin data.
-- Uninstall preserves Catalog data but removes plugin permission definitions.
-- Existing Phase 3 databases are migrated from `@beyondx/module-catalog` to `@beyondx/plugin-catalog`, preserving the current enabled state.
-- Fresh databases do not seed Catalog as installed.
+- Hot plugin enable/disable without restarting the API service.
+- Commerce remains a first-party plugin, not a CMS core feature.
+- Commerce depends on the Catalog plugin.
+- Pricing, warehouses, stock levels, stock movements, carts, checkout and orders.
+- Integer minor-unit money values to avoid floating-point currency errors.
+- Guest cart tokens stored only as hashes.
+- Idempotent checkout and atomic stock reservation.
+- Admin UI, OpenAPI, tests and `verify:phase4`.
 
-## Apply on Windows
-
-Extract into the BeyondX project root and Replace existing files, then run:
+## Install
 
 ```powershell
 pnpm install --no-frozen-lockfile
+pnpm db:generate
 pnpm db:migrate
-pnpm db:seed
 ```
 
-`db:generate` is not required because this patch does not change the Prisma model schema.
+Do not reset the database.
 
-Restart API/Admin and sign in again. The new access token must include `plugins.read` / `plugins.manage`.
-
-Then run:
+## Quality gate
 
 ```powershell
 pnpm lint
@@ -38,20 +32,10 @@ pnpm test
 pnpm build
 ```
 
-For the structural verifier:
+Then temporarily move `.env` outside the project root and run:
 
 ```powershell
-Move-Item .env ..\BeyondX.env.backup
-pnpm verify:phase3
-Move-Item ..\BeyondX.env.backup .env
+pnpm verify:phase4
 ```
 
-Expected final line:
-
-```text
-Phase 3 Plugin Runtime + Platform Builder + Catalog Plugin structure verified successfully.
-```
-
-## Important runtime behavior
-
-Plugin activation/deactivation is restart-safe in Phase 3 v1. Changing Enabled state shows `Restart required`. Restart the API and sign in again to apply route/menu changes.
+See `PHASE4-VERIFICATION.md` for the manual hot-plugin and commerce workflow checks.

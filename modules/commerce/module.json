@@ -1,0 +1,7 @@
+{
+  "name": "@beyondx/plugin-commerce",
+  "displayName": "Commerce Plugin",
+  "version": "1.0.0",
+  "description": "Pricing, inventory, carts, checkout and orders",
+  "dependencies": ["@beyondx/plugin-catalog", "@beyondx/module-schema"]
+}

@@ -7,11 +7,14 @@ import {
   enablePlugin,
   installPlugin,
   listPlugins,
+  refreshSession,
   uninstallPlugin,
 } from "@/lib/api";
 import type { PluginRuntimeState } from "@/lib/types";
+import { useAuth } from "@/components/auth-provider";
 
 export default function PluginsPage() {
+  const { setUser } = useAuth();
   const [plugins, setPlugins] = useState<PluginRuntimeState[]>([]);
   const [busyId, setBusyId] = useState("");
   const [error, setError] = useState("");
@@ -33,6 +36,9 @@ export default function PluginsPage() {
     setBusyId(id);
     try {
       await action();
+      const session = await refreshSession();
+      setUser(session.user);
+      window.dispatchEvent(new Event("beyondx:plugins-changed"));
       await load();
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Plugin operation failed");
@@ -47,17 +53,11 @@ export default function PluginsPage() {
         <div>
           <span className="eyebrow">Settings</span>
           <h1>Plugins</h1>
-          <p>Install only the capabilities this BeyondX instance needs. Disabled plugins keep their data but stop contributing menus and APIs after restart.</p>
+          <p>Install only the capabilities this BeyondX instance needs. Plugin menus and APIs activate or deactivate immediately without restarting the service.</p>
         </div>
       </header>
 
       {error ? <div className="error-banner">{error}</div> : null}
-      {plugins.some((plugin) => plugin.restartRequired) ? (
-        <div className="warning-banner">
-          Plugin state changed. Restart the BeyondX API, then sign in again to apply runtime menus, routes and permissions.
-        </div>
-      ) : null}
-
       <section className="plugin-grid">
         {plugins.map((plugin) => (
           <article className="panel plugin-card" key={plugin.id}>
@@ -130,7 +130,6 @@ export default function PluginsPage() {
 }
 
 function PluginStatus({ plugin }: { plugin: PluginRuntimeState }) {
-  if (plugin.restartRequired) return <span className="plugin-status warning">Restart required</span>;
   if (plugin.active) return <span className="plugin-status active">Active</span>;
   if (plugin.installed) return <span className="plugin-status installed">Installed</span>;
   return <span className="plugin-status available">Available</span>;

@@ -127,6 +127,7 @@ async function createDependencies(
         state: "active",
       },
     ],
+    isPluginActive: () => true,
     close: () => Promise.resolve(),
   };
 }
@@ -250,6 +251,37 @@ describe("BeyondX API", () => {
       headers: { authorization: "Bearer stale-token" },
     });
     expect(response.statusCode).toBe(200);
+  });
+
+
+  it("gates plugin routes immediately when a plugin is inactive", async () => {
+    const dependencies = await createDependencies();
+    let active = false;
+    dependencies.isPluginActive = () => active;
+    dependencies.routes.register("@beyondx/plugin-example", {
+      method: "GET",
+      path: "/api/v1/plugin-hot-test",
+      summary: "Hot plugin route test",
+      tags: ["Test"],
+      public: true,
+      handler: () => Promise.resolve({ body: { ok: true } }),
+    });
+    const app = await createApp(dependencies);
+    apps.push(app);
+
+    const inactive = await app.inject({ method: "GET", url: "/api/v1/plugin-hot-test" });
+    expect(inactive.statusCode).toBe(404);
+    expect(inactive.json<ErrorResponse>()).toMatchObject({
+      error: { code: "PLUGIN_ROUTE_INACTIVE" },
+    });
+
+    active = true;
+    const activated = await app.inject({ method: "GET", url: "/api/v1/plugin-hot-test" });
+    expect(activated.statusCode).toBe(200);
+
+    active = false;
+    const deactivated = await app.inject({ method: "GET", url: "/api/v1/plugin-hot-test" });
+    expect(deactivated.statusCode).toBe(404);
   });
 
   it("authenticates bearer tokens before protected module routes", async () => {

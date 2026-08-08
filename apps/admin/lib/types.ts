@@ -310,3 +310,65 @@ export interface PluginRuntimeState {
   capabilities: string[];
   adminNavigation: PluginAdminNavigationItem[];
 }
+
+export interface CommercePrice {
+  id: string;
+  variantId: string;
+  productName: string;
+  variantTitle: string;
+  sku: string;
+  currency: string;
+  unitAmount: number;
+  compareAtAmount: number | null;
+  active: boolean;
+  updatedAt: string;
+}
+
+export interface CommerceWarehouse {
+  id: string;
+  code: string;
+  name: string;
+  active: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CommerceStockLevel {
+  id: string;
+  warehouseId: string;
+  warehouse: string;
+  variantId: string;
+  productName: string;
+  variantTitle: string;
+  sku: string;
+  onHand: number;
+  reserved: number;
+  available: number;
+  lowStockThreshold: number;
+  lowStock: boolean;
+  updatedAt: string;
+}
+
+export interface CommerceOrderItem {
+  id: string;
+  variantId: string;
+  sku: string;
+  title: string;
+  quantity: number;
+  unitAmount: number;
+  lineTotalAmount: number;
+}
+
+export interface CommerceOrder {
+  id: string;
+  orderNumber: string;
+  status: "PENDING_PAYMENT" | "CONFIRMED" | "CANCELLED";
+  currency: string;
+  subtotalAmount: number;
+  totalAmount: number;
+  createdAt: string;
+  updatedAt: string;
+  cancelledAt: string | null;
+  items: CommerceOrderItem[];
+  checkoutSession?: { warehouseId: string; warehouse?: CommerceWarehouse };
+}

@@ -1,3 +1,21 @@
+## 0.5.0 — Phase 4 Commerce Plugin (In Progress)
+
+### Added
+
+- Added hot plugin activation/deactivation without API restart.
+- Added dynamic plugin route gating and Admin navigation refresh.
+- Added first-party `@beyondx/plugin-commerce`, dependent on the Catalog plugin.
+- Added integer-minor-unit variant pricing, warehouses, stock levels and stock movement ledger.
+- Added secure guest carts, idempotent checkout, atomic inventory reservation and order snapshots.
+- Added order confirm/cancel inventory transitions and Commerce Admin UI.
+- Added Commerce Prisma migration, tests, OpenAPI request schemas and `verify:phase4`.
+
+### Architecture
+
+- Commerce remains outside BeyondX core and contributes UI/API only while its plugin is active.
+- Catalog cannot be disabled while the active Commerce plugin depends on it.
+- Commerce custom metadata hooks into the shared Schema Engine through system extensions.
+
 ## Phase 3 Platform Builder v2
 
 - Added reusable COMPONENT schema kind.

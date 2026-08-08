@@ -57,9 +57,13 @@ export class ModuleRegistry {
     return ordered;
   }
 
-  async createKernel(context: ModuleContext): Promise<Kernel> {
+  async createKernel(
+    context: ModuleContext,
+    options: { bootNames?: ReadonlySet<string> } = {},
+  ): Promise<Kernel> {
     const kernel = new Kernel(context);
     for (const module of this.resolveLoadOrder()) await kernel.register(module);
+    await kernel.boot(options.bootNames);
     return kernel;
   }
 }
@@ -200,13 +204,58 @@ export class PluginRegistry {
   }
 }
 
+export interface PluginLifecycleController {
+  activate(packageName: string): Promise<void>;
+  deactivate(packageName: string): Promise<void>;
+}
+
 export class PluginRuntime {
   readonly #activePackages = new Set<string>();
+  #lifecycle: PluginLifecycleController | null = null;
 
   constructor(
     readonly registry: PluginRegistry,
     private readonly store: PluginStateStore,
   ) {}
+
+  attachLifecycle(controller: PluginLifecycleController): void {
+    this.#lifecycle = controller;
+  }
+
+  isActivePackage(packageName: string): boolean {
+    return this.#activePackages.has(packageName);
+  }
+
+  setActivePackages(packageNames: Iterable<string>): void {
+    this.#activePackages.clear();
+    for (const packageName of packageNames) this.#activePackages.add(packageName);
+  }
+
+  async enabledPackageNames(): Promise<string[]> {
+    const installations = await this.store.list();
+    return installations
+      .filter((installation) => installation.enabled)
+      .map((installation) => installation.packageName);
+  }
+
+  resolveAvailableModules(availableModules: readonly string[]): BeyondXModule[] {
+    const availableModuleSet = new Set(availableModules);
+    const definitions = this.registry.list();
+
+    for (const definition of definitions) {
+      for (const requiredModule of definition.manifest.requiredModules) {
+        if (!availableModuleSet.has(requiredModule)) {
+          throw new AppError({
+            code: "PLUGIN_MISSING_MODULE_DEPENDENCY",
+            message: `${definition.manifest.displayName} requires module ${requiredModule}`,
+            details: { plugin: definition.manifest.id, requiredModule },
+          });
+        }
+      }
+    }
+
+    return resolvePluginLoadOrder(definitions).map((definition) => definition.createModule());
+  }
 
   async resolveEnabledModules(availableModules: readonly string[]): Promise<BeyondXModule[]> {
     const installations = await this.store.list();
@@ -230,13 +279,7 @@ export class PluginRuntime {
       }
     }
 
-    const ordered = resolvePluginLoadOrder(enabledDefinitions);
-    this.#activePackages.clear();
-    const modules = ordered.map((definition) => {
-      this.#activePackages.add(definition.manifest.packageName);
-      return definition.createModule();
-    });
-    return modules;
+    return resolvePluginLoadOrder(enabledDefinitions).map((definition) => definition.createModule());
   }
 
   async listStates(): Promise<PluginRuntimeState[]> {
@@ -260,7 +303,7 @@ export class PluginRuntime {
         installed,
         enabled,
         active,
-        restartRequired: enabled !== active,
+        restartRequired: false,
         requiredModules: [...manifest.requiredModules],
         pluginDependencies: [...manifest.pluginDependencies],
         capabilities: [...manifest.capabilities],
@@ -287,7 +330,17 @@ export class PluginRuntime {
       });
     }
     await this.assertPluginDependenciesEnabled(definition);
+    const lifecycle = this.requireLifecycle();
+
     await this.store.setEnabled(definition.manifest.packageName, true);
+    try {
+      await lifecycle.activate(definition.manifest.packageName);
+      this.#activePackages.add(definition.manifest.packageName);
+    } catch (error) {
+      await this.store.setEnabled(definition.manifest.packageName, false).catch(() => undefined);
+      this.#activePackages.delete(definition.manifest.packageName);
+      throw error;
+    }
     return this.requireState(id);
   }
 
@@ -302,7 +355,20 @@ export class PluginRuntime {
         statusCode: 409,
       });
     }
-    await this.store.setEnabled(definition.manifest.packageName, false);
+
+    const lifecycle = this.requireLifecycle();
+    if (this.#activePackages.has(definition.manifest.packageName)) {
+      await lifecycle.deactivate(definition.manifest.packageName);
+    }
+
+    try {
+      await this.store.setEnabled(definition.manifest.packageName, false);
+      this.#activePackages.delete(definition.manifest.packageName);
+    } catch (error) {
+      await lifecycle.activate(definition.manifest.packageName).catch(() => undefined);
+      this.#activePackages.add(definition.manifest.packageName);
+      throw error;
+    }
     return this.requireState(id);
   }
 
@@ -310,22 +376,26 @@ export class PluginRuntime {
     const definition = this.registry.get(id);
     await this.assertNoEnabledDependants(definition);
     const installation = await this.store.find(definition.manifest.packageName);
-    if (installation?.enabled === true) {
+    if (installation?.enabled === true || this.#activePackages.has(definition.manifest.packageName)) {
       throw new AppError({
         code: "PLUGIN_DISABLE_BEFORE_UNINSTALL",
         message: `${definition.manifest.displayName} must be disabled before it can be uninstalled`,
         statusCode: 409,
       });
     }
-    if (this.#activePackages.has(definition.manifest.packageName)) {
-      throw new AppError({
-        code: "PLUGIN_RESTART_BEFORE_UNINSTALL",
-        message: `Restart BeyondX after disabling ${definition.manifest.displayName}, then uninstall it`,
-        statusCode: 409,
-      });
-    }
     await this.store.uninstall(definition.manifest.packageName);
     return this.requireState(id);
+  }
+
+  private requireLifecycle(): PluginLifecycleController {
+    if (!this.#lifecycle) {
+      throw new AppError({
+        code: "PLUGIN_LIFECYCLE_NOT_READY",
+        message: "Plugin lifecycle controller is not ready",
+        statusCode: 503,
+      });
+    }
+    return this.#lifecycle;
   }
 
   private async requireState(id: string): Promise<PluginRuntimeState> {
@@ -359,10 +429,10 @@ export class PluginRuntime {
     const states = await this.listStates();
     const byId = new Map(states.map((state) => [state.id, state]));
     for (const dependencyId of definition.manifest.pluginDependencies) {
-      if (byId.get(dependencyId)?.enabled !== true) {
+      if (byId.get(dependencyId)?.active !== true) {
         throw new AppError({
           code: "PLUGIN_DEPENDENCY_DISABLED",
-          message: `${definition.manifest.displayName} requires enabled plugin ${dependencyId}`,
+          message: `${definition.manifest.displayName} requires active plugin ${dependencyId}`,
           statusCode: 409,
           details: { plugin: definition.manifest.id, dependency: dependencyId },
         });
@@ -373,12 +443,12 @@ export class PluginRuntime {
   private async assertNoEnabledDependants(definition: PluginDefinition): Promise<void> {
     const states = await this.listStates();
     const dependant = states.find(
-      (state) => state.enabled && state.pluginDependencies.includes(definition.manifest.id),
+      (state) => state.active && state.pluginDependencies.includes(definition.manifest.id),
     );
     if (dependant) {
       throw new AppError({
         code: "PLUGIN_REQUIRED_BY_ENABLED_PLUGIN",
-        message: `${definition.manifest.displayName} is required by enabled plugin ${dependant.displayName}`,
+        message: `${definition.manifest.displayName} is required by active plugin ${dependant.displayName}`,
         statusCode: 409,
         details: { plugin: definition.manifest.id, dependant: dependant.id },
       });

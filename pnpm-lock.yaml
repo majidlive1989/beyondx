@@ -102,6 +102,9 @@ importers:
       '@beyondx/plugin-catalog':
         specifier: workspace:*
         version: link:../../plugins/catalog
+      '@beyondx/plugin-commerce':
+        specifier: workspace:*
+        version: link:../../plugins/commerce
       '@beyondx/validation':
         specifier: workspace:*
         version: link:../../packages/validation
@@ -141,6 +144,28 @@ importers:
         version: link:../../packages/testing
 
   modules/catalog:
+    dependencies:
+      '@beyondx/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+      '@beyondx/database':
+        specifier: workspace:*
+        version: link:../../packages/database
+      '@beyondx/module-schema':
+        specifier: workspace:*
+        version: link:../schema
+      '@beyondx/validation':
+        specifier: workspace:*
+        version: link:../../packages/validation
+      zod:
+        specifier: 3.25.76
+        version: 3.25.76
+    devDependencies:
+      '@beyondx/testing':
+        specifier: workspace:*
+        version: link:../../packages/testing
+
+  modules/commerce:
     dependencies:
       '@beyondx/core':
         specifier: workspace:*
@@ -344,6 +369,22 @@ importers:
       '@beyondx/module-catalog':
         specifier: workspace:*
         version: link:../../modules/catalog
+      '@beyondx/module-system':
+        specifier: workspace:*
+        version: link:../../packages/module-system
+    devDependencies:
+      '@beyondx/testing':
+        specifier: workspace:*
+        version: link:../../packages/testing
+
+  plugins/commerce:
+    dependencies:
+      '@beyondx/database':
+        specifier: workspace:*
+        version: link:../../packages/database
+      '@beyondx/module-commerce':
+        specifier: workspace:*
+        version: link:../../modules/commerce
       '@beyondx/module-system':
         specifier: workspace:*
         version: link:../../packages/module-system

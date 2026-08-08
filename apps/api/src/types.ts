@@ -24,6 +24,7 @@ export interface ApplicationDependencies {
   routes: HttpRouteRegistry;
   authenticator: AccessTokenAuthenticator;
   modules: () => ModuleRuntimeStatus[];
+  isPluginActive: (packageName: string) => boolean;
   close: () => Promise<void>;
 }
 

@@ -8,6 +8,7 @@ import type { BeyondXFastifyInstance } from "./types.js";
 export function registerModuleRoutes(
   app: BeyondXFastifyInstance,
   routes: HttpRouteRegistry,
+  isPluginActive: (packageName: string) => boolean = () => true,
 ): void {
   for (const route of routes.list()) {
     app.route({
@@ -23,6 +24,14 @@ export function registerModuleRoutes(
         ...(route.schema ?? {}),
       },
       handler: async (request, reply) => {
+        if (route.owner.startsWith("@beyondx/plugin-") && !isPluginActive(route.owner)) {
+          throw new AppError({
+            code: "PLUGIN_ROUTE_INACTIVE",
+            message: "This plugin route is not active",
+            statusCode: 404,
+          });
+        }
+
         if (!route.public) {
           if (!request.principal) {
             throw new AppError({

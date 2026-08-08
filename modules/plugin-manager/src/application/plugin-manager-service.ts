@@ -32,13 +32,13 @@ export class PluginManagerService {
 
   async enable(id: string, context: PluginMutationContext): Promise<PluginRuntimeState> {
     const state = await this.runtime.enable(id);
-    await this.audit("plugin.enable", id, context, { restartRequired: state.restartRequired });
+    await this.audit("plugin.enable", id, context, { hotApplied: true });
     return state;
   }
 
   async disable(id: string, context: PluginMutationContext): Promise<PluginRuntimeState> {
     const state = await this.runtime.disable(id);
-    await this.audit("plugin.disable", id, context, { restartRequired: state.restartRequired });
+    await this.audit("plugin.disable", id, context, { hotApplied: true });
     return state;
   }
 

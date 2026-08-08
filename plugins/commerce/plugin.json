@@ -1,0 +1,1 @@
+{ "id": "commerce", "packageName": "@beyondx/plugin-commerce", "displayName": "Commerce", "version": "1.0.0", "description": "Pricing, inventory, guest carts, checkout and order management", "pluginDependencies": ["catalog"] }

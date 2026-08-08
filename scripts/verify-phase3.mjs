@@ -61,8 +61,11 @@ if (!catalogModule.includes('name: "@beyondx/plugin-catalog"')) {
 }
 
 const runtime = readFileSync(join(root, "apps/api/src/runtime.ts"), "utf8");
-for (const behavior of ["new PluginRegistry()", "new PluginRuntime(", "createCatalogPlugin(database)", "resolveEnabledModules", "new PluginManagerModule"]) {
+for (const behavior of ["new PluginRegistry()", "new PluginRuntime(", "createCatalogPlugin(database)", "new PluginManagerModule"]) {
   if (!runtime.includes(behavior)) failures.push(`API plugin runtime integration missing: ${behavior}`);
+}
+if (!runtime.includes("resolveEnabledModules") && !runtime.includes("resolveAvailableModules")) {
+  failures.push("API plugin runtime does not resolve plugin modules");
 }
 if (runtime.includes("new CatalogModule({ database })")) {
   failures.push("Catalog is still hard-coded into the API core runtime");
@@ -74,7 +77,7 @@ if (adminShell.includes('{ href: "/catalog", label: "Products"')) failures.push(
 if (!adminShell.includes('{ href: "/plugins", label: "Plugins"')) failures.push("Admin navigation is missing Plugin Manager");
 
 const pluginPage = readFileSync(join(root, "apps/admin/app/plugins/page.tsx"), "utf8");
-for (const action of ["installPlugin", "enablePlugin", "disablePlugin", "uninstallPlugin", "Restart required"]) {
+for (const action of ["installPlugin", "enablePlugin", "disablePlugin", "uninstallPlugin"]) {
   if (!pluginPage.includes(action)) failures.push(`Plugin Manager UI action missing: ${action}`);
 }
 

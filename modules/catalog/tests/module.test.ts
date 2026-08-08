@@ -5,6 +5,7 @@ import {
   PermissionRegistry,
   ServiceContainer,
   type EventBus,
+  type ModuleContext,
 } from "@beyondx/core";
 import { createCapturingLogger } from "@beyondx/testing";
 import { describe, expect, it, vi } from "vitest";
@@ -36,7 +37,7 @@ describe("CatalogModule", () => {
     const module = new CatalogModule({ database: database as never });
     const { logger } = createCapturingLogger();
 
-    await module.register({
+    const context: ModuleContext = {
       services,
       routes,
       permissions,
@@ -44,13 +45,17 @@ describe("CatalogModule", () => {
       events: eventBusMock(),
       extensions: new ExtensionRegistry(),
       logger,
-    });
+    };
+
+    await module.register(context);
 
     expect(services.has(CATALOG_SERVICE)).toBe(true);
-    expect(ensureSystemExtensionSchema).toHaveBeenCalledTimes(2);
     expect(routes.list().some((route) => route.path === "/api/v1/admin/catalog/products")).toBe(true);
     expect(routes.list().some((route) => route.path === "/api/v1/catalog/products")).toBe(true);
     expect(permissions.has("catalog.variants.manage")).toBe(true);
     expect((await health.runAll()).find((check) => check.id === "module.catalog")?.status).toBe("healthy");
+
+    await module.boot(context);
+    expect(ensureSystemExtensionSchema).toHaveBeenCalledTimes(2);
   });
 });

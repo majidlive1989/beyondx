@@ -42,16 +42,24 @@ export function AdminShell({ children }: { children: ReactNode }) {
     }
 
     let active = true;
-    void listRuntimePlugins()
-      .then((items) => {
+    const loadPlugins = async (): Promise<void> => {
+      try {
+        const items = await listRuntimePlugins();
         if (active) setRuntimePlugins(items);
-      })
-      .catch(() => {
+      } catch {
         if (active) setRuntimePlugins([]);
-      });
+      }
+    };
+    const handlePluginsChanged = (): void => {
+      void loadPlugins();
+    };
+
+    void loadPlugins();
+    window.addEventListener("beyondx:plugins-changed", handlePluginsChanged);
 
     return () => {
       active = false;
+      window.removeEventListener("beyondx:plugins-changed", handlePluginsChanged);
     };
   }, [user]);
 

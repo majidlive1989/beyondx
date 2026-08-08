@@ -49,22 +49,8 @@ export class CatalogModule implements BeyondXModule {
 
   constructor(private readonly options: CatalogModuleOptions) {}
 
-  async register(context: ModuleContext): Promise<void> {
+  register(context: ModuleContext): Promise<void> {
     const schemaService = context.services.resolve(SCHEMA_SERVICE);
-    await Promise.all([
-      schemaService.ensureSystemExtensionSchema({
-        key: "catalog.product",
-        displayName: "Product custom fields",
-        pluralName: "Product custom fields",
-        description: "Schema-driven fields attached to catalog products",
-      }),
-      schemaService.ensureSystemExtensionSchema({
-        key: "catalog.variant",
-        displayName: "Variant custom fields",
-        pluralName: "Variant custom fields",
-        description: "Schema-driven fields attached to catalog variants",
-      }),
-    ]);
     const service = new CatalogService(
       new PrismaCatalogRepository(this.options.database),
       schemaService,
@@ -88,9 +74,25 @@ export class CatalogModule implements BeyondXModule {
         },
       }),
     });
+    return Promise.resolve();
   }
 
   async boot(context: ModuleContext): Promise<void> {
+    const schemaService = context.services.resolve(SCHEMA_SERVICE);
+    await Promise.all([
+      schemaService.ensureSystemExtensionSchema({
+        key: "catalog.product",
+        displayName: "Product custom fields",
+        pluralName: "Product custom fields",
+        description: "Schema-driven fields attached to catalog products",
+      }),
+      schemaService.ensureSystemExtensionSchema({
+        key: "catalog.variant",
+        displayName: "Variant custom fields",
+        pluralName: "Variant custom fields",
+        description: "Schema-driven fields attached to catalog variants",
+      }),
+    ]);
     await context.events.publish({
       name: "catalog.module.booted",
       version: 1,

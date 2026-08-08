@@ -441,6 +441,11 @@ model ProductVariant {
   updatedAt       DateTime                @updatedAt
   product         Product                 @relation(fields: [productId], references: [id], onDelete: Cascade)
   attributeValues VariantAttributeValue[]
+  commercePrices  CommercePrice[]
+  stockLevels     CommerceStockLevel[]
+  stockMovements  CommerceStockMovement[]
+  cartItems       CommerceCartItem[]
+  orderItems      CommerceOrderItem[]
 
   @@index([productId, position])
   @@index([productId, status])
@@ -572,4 +577,194 @@ model EntityExtension {
   @@unique([schemaId, targetType, targetId])
   @@index([targetType, targetId])
   @@map("entity_extensions")
+}
+
+
+enum CommerceCartStatus {
+  ACTIVE
+  CONVERTED
+  ABANDONED
+  EXPIRED
+}
+
+enum CommerceCheckoutStatus {
+  OPEN
+  COMPLETED
+  CANCELLED
+  EXPIRED
+}
+
+enum CommerceOrderStatus {
+  PENDING_PAYMENT
+  CONFIRMED
+  CANCELLED
+}
+
+enum CommerceStockMovementType {
+  ADJUSTMENT
+  RECEIVE
+  RESERVE
+  RELEASE
+  SALE
+}
+
+model CommercePrice {
+  id              String         @id @default(cuid())
+  variantId       String
+  currency        String
+  unitAmount      Int
+  compareAtAmount Int?
+  active          Boolean        @default(true)
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  variant         ProductVariant @relation(fields: [variantId], references: [id], onDelete: Cascade)
+
+  @@unique([variantId, currency])
+  @@index([currency, active])
+  @@map("commerce_prices")
+}
+
+model CommerceWarehouse {
+  id             String                  @id @default(cuid())
+  code           String                  @unique
+  name           String
+  active         Boolean                 @default(true)
+  createdAt      DateTime                @default(now())
+  updatedAt      DateTime                @updatedAt
+  stockLevels    CommerceStockLevel[]
+  stockMovements CommerceStockMovement[]
+  checkouts      CommerceCheckoutSession[]
+
+  @@index([active, name])
+  @@map("commerce_warehouses")
+}
+
+model CommerceStockLevel {
+  id                String            @id @default(cuid())
+  warehouseId       String
+  variantId         String
+  onHand            Int               @default(0)
+  reserved          Int               @default(0)
+  lowStockThreshold Int               @default(0)
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+  warehouse         CommerceWarehouse @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
+  variant           ProductVariant    @relation(fields: [variantId], references: [id], onDelete: Cascade)
+
+  @@unique([warehouseId, variantId])
+  @@index([variantId])
+  @@index([warehouseId, updatedAt])
+  @@map("commerce_stock_levels")
+}
+
+model CommerceStockMovement {
+  id            String                    @id @default(cuid())
+  warehouseId   String
+  variantId     String
+  type          CommerceStockMovementType
+  onHandDelta   Int
+  reservedDelta Int                       @default(0)
+  reason        String?
+  referenceType String?
+  referenceId   String?
+  actorUserId   String?
+  createdAt     DateTime                  @default(now())
+  warehouse     CommerceWarehouse         @relation(fields: [warehouseId], references: [id], onDelete: Restrict)
+  variant       ProductVariant            @relation(fields: [variantId], references: [id], onDelete: Restrict)
+
+  @@index([variantId, createdAt])
+  @@index([warehouseId, createdAt])
+  @@index([referenceType, referenceId])
+  @@map("commerce_stock_movements")
+}
+
+model CommerceCart {
+  id              String             @id @default(cuid())
+  accessTokenHash String             @unique
+  userId          String?
+  status          CommerceCartStatus @default(ACTIVE)
+  currency        String
+  expiresAt       DateTime
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+  items           CommerceCartItem[]
+  checkout        CommerceCheckoutSession?
+  order           CommerceOrder?
+
+  @@index([status, expiresAt])
+  @@index([userId, status])
+  @@map("commerce_carts")
+}
+
+model CommerceCartItem {
+  id        String         @id @default(cuid())
+  cartId    String
+  variantId String
+  quantity  Int
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+  cart      CommerceCart   @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  variant   ProductVariant @relation(fields: [variantId], references: [id], onDelete: Restrict)
+
+  @@unique([cartId, variantId])
+  @@index([variantId])
+  @@map("commerce_cart_items")
+}
+
+model CommerceCheckoutSession {
+  id             String                 @id @default(cuid())
+  cartId         String                 @unique
+  warehouseId    String
+  idempotencyKey String                 @unique
+  status         CommerceCheckoutStatus @default(OPEN)
+  expiresAt      DateTime
+  completedAt    DateTime?
+  createdAt      DateTime               @default(now())
+  updatedAt      DateTime               @updatedAt
+  cart           CommerceCart           @relation(fields: [cartId], references: [id], onDelete: Restrict)
+  warehouse      CommerceWarehouse      @relation(fields: [warehouseId], references: [id], onDelete: Restrict)
+  order          CommerceOrder?
+
+  @@index([status, expiresAt])
+  @@map("commerce_checkout_sessions")
+}
+
+model CommerceOrder {
+  id                String              @id @default(cuid())
+  orderNumber       String              @unique
+  cartId            String              @unique
+  checkoutSessionId String              @unique
+  userId            String?
+  status            CommerceOrderStatus @default(PENDING_PAYMENT)
+  currency          String
+  subtotalAmount    Int
+  totalAmount       Int
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  cancelledAt       DateTime?
+  cart              CommerceCart        @relation(fields: [cartId], references: [id], onDelete: Restrict)
+  checkoutSession   CommerceCheckoutSession @relation(fields: [checkoutSessionId], references: [id], onDelete: Restrict)
+  items             CommerceOrderItem[]
+
+  @@index([status, createdAt])
+  @@index([userId, createdAt])
+  @@map("commerce_orders")
+}
+
+model CommerceOrderItem {
+  id              String         @id @default(cuid())
+  orderId         String
+  variantId       String
+  sku             String
+  title           String
+  quantity        Int
+  unitAmount      Int
+  lineTotalAmount Int
+  createdAt       DateTime       @default(now())
+  order           CommerceOrder  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  variant         ProductVariant @relation(fields: [variantId], references: [id], onDelete: Restrict)
+
+  @@index([orderId])
+  @@index([variantId])
+  @@map("commerce_order_items")
 }

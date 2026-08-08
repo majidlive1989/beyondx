@@ -12,6 +12,10 @@ import type {
   CatalogProductStatus,
   CatalogProductVariant,
   CatalogVariantStatus,
+  CommerceOrder,
+  CommercePrice,
+  CommerceStockLevel,
+  CommerceWarehouse,
   ContentEntry,
   ContentEntryStatus,
   ContentFieldInput,
@@ -647,4 +651,62 @@ export function disablePlugin(id: string): Promise<PluginRuntimeState> {
 
 export function uninstallPlugin(id: string): Promise<PluginRuntimeState> {
   return pluginAction(id, "uninstall");
+}
+
+export async function listCommercePrices(): Promise<CommercePrice[]> {
+  return (await request<{ items: CommercePrice[] }>("/api/v1/admin/commerce/prices")).items;
+}
+
+export async function setCommercePrice(input: {
+  variantId: string;
+  currency: string;
+  unitAmount: number;
+  compareAtAmount?: number | null;
+  active?: boolean;
+}): Promise<CommercePrice> {
+  return (await request<{ price: CommercePrice }>("/api/v1/admin/commerce/prices", {
+    method: "POST",
+    body: JSON.stringify(input),
+  })).price;
+}
+
+export async function listCommerceWarehouses(): Promise<CommerceWarehouse[]> {
+  return (await request<{ items: CommerceWarehouse[] }>("/api/v1/admin/commerce/warehouses")).items;
+}
+
+export async function createCommerceWarehouse(input: { code: string; name: string }): Promise<CommerceWarehouse> {
+  return (await request<{ warehouse: CommerceWarehouse }>("/api/v1/admin/commerce/warehouses", {
+    method: "POST",
+    body: JSON.stringify(input),
+  })).warehouse;
+}
+
+export async function listCommerceStock(warehouseId?: string): Promise<CommerceStockLevel[]> {
+  const query = warehouseId ? `?warehouseId=${encodeURIComponent(warehouseId)}` : "";
+  return (await request<{ items: CommerceStockLevel[] }>(`/api/v1/admin/commerce/stock${query}`)).items;
+}
+
+export async function adjustCommerceStock(input: {
+  warehouseId: string;
+  variantId: string;
+  quantityDelta: number;
+  lowStockThreshold?: number;
+  reason?: string;
+}): Promise<CommerceStockLevel | undefined> {
+  return (await request<{ stock?: CommerceStockLevel }>("/api/v1/admin/commerce/stock/adjust", {
+    method: "POST",
+    body: JSON.stringify(input),
+  })).stock;
+}
+
+export async function listCommerceOrders(): Promise<CommerceOrder[]> {
+  return (await request<{ items: CommerceOrder[] }>("/api/v1/admin/commerce/orders")).items;
+}
+
+export async function confirmCommerceOrder(id: string): Promise<CommerceOrder> {
+  return (await request<{ order: CommerceOrder }>(`/api/v1/admin/commerce/orders/${encodeURIComponent(id)}/confirm`, { method: "POST" })).order;
+}
+
+export async function cancelCommerceOrder(id: string): Promise<CommerceOrder> {
+  return (await request<{ order: CommerceOrder }>(`/api/v1/admin/commerce/orders/${encodeURIComponent(id)}/cancel`, { method: "POST" })).order;
 }

@@ -6,7 +6,7 @@ describe("PluginManagerModule", () => {
   it("is a core module that exposes plugin lifecycle permissions", () => {
     expect(PLUGIN_MANAGER_MANIFEST).toMatchObject({
       name: "@beyondx/module-plugin-manager",
-      version: "0.4.0",
+      version: "0.5.0",
     });
     expect(PLUGIN_MANAGER_MANIFEST.permissions).toEqual(["plugins.read", "plugins.manage"]);
   });

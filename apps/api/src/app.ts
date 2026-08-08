@@ -18,10 +18,34 @@ function toAbsoluteRoute(route: string): `/${string}` {
   return route as `/${string}`;
 }
 
+
+function filterInactivePluginRoutes(
+  document: unknown,
+  routes: Array<{ owner: string; method: string; path: string }>,
+  isPluginActive: (packageName: string) => boolean,
+): unknown {
+  if (!isRecord(document)) return document;
+  const cloned = structuredClone(document);
+  if (!isRecord(cloned.paths)) return cloned;
+
+  for (const route of routes) {
+    if (!route.owner.startsWith("@beyondx/plugin-") || isPluginActive(route.owner)) continue;
+    const pathItem = cloned.paths[route.path];
+    if (!isRecord(pathItem)) continue;
+    delete pathItem[route.method.toLowerCase()];
+    if (Object.keys(pathItem).length === 0) delete cloned.paths[route.path];
+  }
+  return cloned;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
 export async function createApp(
   dependencies: ApplicationDependencies,
 ): Promise<BeyondXFastifyInstance> {
-  const { config, logger, health, routes, authenticator } = dependencies;
+  const { config, logger, health, routes, authenticator, isPluginActive } = dependencies;
   const app: BeyondXFastifyInstance = Fastify({
     loggerInstance: logger,
     trustProxy: true,
@@ -64,7 +88,7 @@ export async function createApp(
         info: {
           title: "BeyondX API",
           description: "API-first modular digital product platform",
-          version: "0.4.0",
+          version: "0.5.0",
         },
         // Keep the OpenAPI server relative so Scalar Try It uses the same origin
         // that served /docs (localhost, 127.0.0.1, reverse proxy, etc.).
@@ -86,8 +110,12 @@ export async function createApp(
           { name: "Content", description: "Published content delivery" },
           { name: "Content Admin", description: "CMS content types, entries and revisions" },
           { name: "Media", description: "Media library, uploads, storage and image management" },
+          { name: "Plugins", description: "Runtime plugin contributions" },
+          { name: "Plugins Admin", description: "Install, enable, disable and uninstall plugins" },
           { name: "Catalog", description: "Public product catalog delivery" },
           { name: "Catalog Admin", description: "Products, variants, SKUs, brands, categories and attributes" },
+          { name: "Commerce", description: "Guest carts, checkout and commerce delivery" },
+          { name: "Commerce Admin", description: "Pricing, inventory, stock movements and orders" },
         ],
       },
     });
@@ -182,13 +210,16 @@ export async function createApp(
     },
   );
 
-  registerModuleRoutes(app, routes);
+  registerModuleRoutes(app, routes, isPluginActive);
 
   if (config.OPENAPI_ENABLED) {
     app.get(
       config.OPENAPI_ROUTE,
       { schema: { hide: true } },
-      (_request, reply) => reply.type("application/json").send(app.swagger()),
+      (_request, reply) =>
+        reply.type("application/json").send(
+          filterInactivePluginRoutes(app.swagger(), routes.list(), isPluginActive),
+        ),
     );
     await app.register(scalar, {
       routePrefix: toAbsoluteRoute(config.DOCS_ROUTE),

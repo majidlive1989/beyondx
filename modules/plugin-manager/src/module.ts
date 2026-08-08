@@ -17,12 +17,12 @@ export const PLUGIN_MANAGER_SERVICE: ServiceToken<PluginManagerService> = Object
 export const PLUGIN_MANAGER_MANIFEST: ModuleManifest = Object.freeze({
   name: "@beyondx/module-plugin-manager",
   displayName: "Plugin Manager",
-  version: "0.4.0",
-  description: "Install, enable and disable BeyondX plugins",
+  version: "0.5.0",
+  description: "Install, enable and disable BeyondX plugins with hot lifecycle",
   dependencies: ["@beyondx/module-foundation", "@beyondx/module-identity"],
   optionalDependencies: [],
   permissions: PLUGIN_MANAGER_PERMISSIONS.map((permission) => permission.id),
-  capabilities: ["plugins.registry", "plugins.lifecycle", "plugins.admin-navigation"],
+  capabilities: ["plugins.registry", "plugins.lifecycle", "plugins.hot-lifecycle", "plugins.admin-navigation"],
 });
 
 export class PluginManagerModule implements BeyondXModule {
