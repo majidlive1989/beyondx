@@ -286,3 +286,27 @@ export interface DynamicDataRecord {
   createdAt: string;
   updatedAt: string;
 }
+
+export interface PluginAdminNavigationItem {
+  group: string;
+  href: string;
+  label: string;
+  permission?: string;
+  exact?: boolean;
+}
+
+export interface PluginRuntimeState {
+  id: string;
+  packageName: string;
+  displayName: string;
+  version: string;
+  description: string;
+  installed: boolean;
+  enabled: boolean;
+  active: boolean;
+  restartRequired: boolean;
+  requiredModules: string[];
+  pluginDependencies: string[];
+  capabilities: string[];
+  adminNavigation: PluginAdminNavigationItem[];
+}

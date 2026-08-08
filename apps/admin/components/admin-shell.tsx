@@ -3,8 +3,8 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { listRuntimeDataSchemas } from "@/lib/api";
-import type { DataSchemaDefinition } from "@/lib/types";
+import { listRuntimeDataSchemas, listRuntimePlugins } from "@/lib/api";
+import type { DataSchemaDefinition, PluginRuntimeState } from "@/lib/types";
 import { useAuth } from "./auth-provider";
 
 interface NavItem {
@@ -33,6 +33,27 @@ export function AdminShell({ children }: { children: ReactNode }) {
   const { user, loading, logout } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
   const [contentSchemas, setContentSchemas] = useState<DataSchemaDefinition[]>([]);
+  const [runtimePlugins, setRuntimePlugins] = useState<PluginRuntimeState[]>([]);
+
+  useEffect(() => {
+    if (!user) {
+      setRuntimePlugins([]);
+      return;
+    }
+
+    let active = true;
+    void listRuntimePlugins()
+      .then((items) => {
+        if (active) setRuntimePlugins(items);
+      })
+      .catch(() => {
+        if (active) setRuntimePlugins([]);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [user]);
 
   useEffect(() => {
     if (!user?.permissions.includes("schema.records.read")) {
@@ -64,6 +85,20 @@ export function AdminShell({ children }: { children: ReactNode }) {
       permission: "schema.records.read",
     }));
 
+    const pluginGroups = new Map<string, NavItem[]>();
+    for (const plugin of runtimePlugins) {
+      for (const contribution of plugin.adminNavigation) {
+        const items = pluginGroups.get(contribution.group) ?? [];
+        items.push({
+          href: contribution.href,
+          label: contribution.label,
+          ...(contribution.permission === undefined ? {} : { permission: contribution.permission }),
+          ...(contribution.exact === undefined ? {} : { exact: contribution.exact }),
+        });
+        pluginGroups.set(contribution.group, items);
+      }
+    }
+
     const candidateGroups: NavGroup[] = [
       { label: "Overview", items: [{ href: "/dashboard", label: "Dashboard", exact: true }] },
       {
@@ -73,13 +108,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
           { href: "/content", label: "CMS content", permission: "content.entries.read" },
         ],
       },
-      {
-        label: "Catalog",
-        items: [
-          { href: "/catalog", label: "Products", permission: "catalog.products.read", exact: true },
-          { href: "/catalog/taxonomy", label: "Catalog setup", permission: "catalog.products.read" },
-        ],
-      },
+      ...[...pluginGroups.entries()].map(([label, items]) => ({ label, items })),
       { label: "Media", items: [{ href: "/media", label: "Media library", permission: "media.assets.read" }] },
       {
         label: "Access",
@@ -91,6 +120,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
       {
         label: "Settings",
         items: [
+          { href: "/plugins", label: "Plugins", permission: "plugins.read" },
           { href: "/builder", label: "Structure builder", permission: "schema.builder.read" },
           { href: "/content-types", label: "CMS models", permission: "content.types.read" },
           { href: "/sessions", label: "Sessions", permission: "identity.sessions.manage" },
@@ -103,7 +133,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
     return candidateGroups
       .map((group) => ({ ...group, items: group.items.filter((item) => canSee(item, user.permissions)) }))
       .filter((group) => group.items.length > 0);
-  }, [contentSchemas, user]);
+  }, [contentSchemas, runtimePlugins, user]);
 
   if (loading || !user) {
     return <main className="centered"><div className="loading-card">Loading BeyondX…</div></main>;

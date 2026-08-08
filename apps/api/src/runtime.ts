@@ -14,13 +14,15 @@ import {
 } from "@beyondx/database";
 import { TypedEventBus } from "@beyondx/events";
 import { createLogger } from "@beyondx/logger";
-import { ModuleRegistry } from "@beyondx/module-system";
+import { ModuleRegistry, PluginRegistry, PluginRuntime } from "@beyondx/module-system";
 import { FoundationModule } from "@beyondx/module-foundation";
 import { IdentityModule } from "@beyondx/module-identity";
 import { ContentModule } from "@beyondx/module-content";
 import { MediaModule } from "@beyondx/module-media";
-import { CatalogModule } from "@beyondx/module-catalog";
 import { SchemaModule } from "@beyondx/module-schema";
+import { PluginManagerModule } from "@beyondx/module-plugin-manager";
+import { createCatalogPlugin } from "@beyondx/plugin-catalog";
+import { PrismaPluginStateStore } from "./plugin-state-store.js";
 import { Redis } from "ioredis";
 import type { ApplicationDependencies } from "./types.js";
 
@@ -75,6 +77,13 @@ export async function createRuntimeDependencies(): Promise<ApplicationDependenci
     },
   });
 
+  const pluginRegistry = new PluginRegistry();
+  pluginRegistry.register(createCatalogPlugin(database));
+  const pluginRuntime = new PluginRuntime(
+    pluginRegistry,
+    new PrismaPluginStateStore(database),
+  );
+
   const registry = new ModuleRegistry();
   registry.register(new FoundationModule());
   registry.register(
@@ -111,7 +120,13 @@ export async function createRuntimeDependencies(): Promise<ApplicationDependenci
     }),
   );
   registry.register(new SchemaModule({ database }));
-  registry.register(new CatalogModule({ database }));
+  registry.register(new PluginManagerModule({ database, runtime: pluginRuntime }));
+
+  const pluginModules = await pluginRuntime.resolveEnabledModules(
+    registry.list().map((manifest) => manifest.name),
+  );
+  for (const pluginModule of pluginModules) registry.register(pluginModule);
+
   const kernel = await registry.createKernel({
     services,
     events,

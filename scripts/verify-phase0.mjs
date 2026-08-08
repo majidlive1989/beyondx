@@ -25,12 +25,12 @@ if (/importers:\s*\{\}/.test(lockfileText) || lockfileText.includes("Provisional
 }
 
 const workspaceText = readFileSync(join(root, "pnpm-workspace.yaml"), "utf8");
-for (const pattern of ["apps/*", "packages/*", "modules/*"]) {
+for (const pattern of ["apps/*", "packages/*", "modules/*", "plugins/*"]) {
   if (!workspaceText.includes(pattern)) failures.push(`Workspace pattern missing: ${pattern}`);
 }
 
 const packageFiles = [];
-for (const parent of ["apps", "packages", "modules"]) {
+for (const parent of ["apps", "packages", "modules", "plugins"]) {
   const dir = join(root, parent);
   if (!existsSync(dir)) continue;
   for (const name of readdirSync(dir)) {

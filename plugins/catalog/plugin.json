@@ -1,0 +1,24 @@
+{
+  "id": "catalog",
+  "packageName": "@beyondx/plugin-catalog",
+  "displayName": "Catalog",
+  "version": "1.0.0",
+  "description": "Products, variants, categories, brands, attributes and media-enabled product catalog",
+  "requiredModules": [
+    "@beyondx/module-foundation",
+    "@beyondx/module-identity",
+    "@beyondx/module-media",
+    "@beyondx/module-schema"
+  ],
+  "pluginDependencies": [],
+  "capabilities": [
+    "catalog.products",
+    "catalog.variants",
+    "catalog.sku",
+    "catalog.categories",
+    "catalog.brands",
+    "catalog.attributes",
+    "catalog.media",
+    "catalog.dynamic-fields"
+  ]
+}

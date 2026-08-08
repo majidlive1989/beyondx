@@ -10,7 +10,7 @@ export const PLATFORM_MODULES = Object.freeze([
   "@beyondx/module-content",
   "@beyondx/module-media",
   "@beyondx/module-schema",
-  "@beyondx/module-catalog",
+  "@beyondx/module-plugin-manager",
 ] as const);
 
 export const IDENTITY_SEED_PERMISSIONS = Object.freeze([
@@ -61,6 +61,12 @@ export const SCHEMA_SEED_PERMISSIONS = Object.freeze([
   ["schema.records.delete", "Delete dynamic records"],
 ] as const);
 
+
+export const PLUGIN_MANAGER_SEED_PERMISSIONS = Object.freeze([
+  ["plugins.read", "Read installed and available plugins"],
+  ["plugins.manage", "Install, enable, disable and uninstall plugins"],
+] as const);
+
 export const CATALOG_SEED_PERMISSIONS = Object.freeze([
   ["catalog.products.read", "Read catalog products and variants"],
   ["catalog.products.create", "Create catalog products"],
@@ -97,20 +103,25 @@ export async function seedDatabase(
     },
   });
 
+  const moduleVersions: Readonly<Record<string, string>> = {
+    "@beyondx/module-identity": "0.2.0",
+    "@beyondx/module-content": "0.3.0",
+    "@beyondx/module-media": "0.3.0",
+    "@beyondx/module-schema": "0.4.0",
+    "@beyondx/module-plugin-manager": "0.4.0",
+  };
   for (const name of PLATFORM_MODULES) {
+    const version = moduleVersions[name] ?? "0.1.0";
     await prisma.moduleInstallation.upsert({
       where: { name },
-      update: {
-        version: ["@beyondx/module-catalog", "@beyondx/module-schema"].includes(name) ? "0.4.0" : ["@beyondx/module-content", "@beyondx/module-media"].includes(name) ? "0.3.0" : name === "@beyondx/module-identity" ? "0.2.0" : "0.1.0",
-        enabled: true,
-      },
-      create: {
-        name,
-        version: ["@beyondx/module-catalog", "@beyondx/module-schema"].includes(name) ? "0.4.0" : ["@beyondx/module-content", "@beyondx/module-media"].includes(name) ? "0.3.0" : name === "@beyondx/module-identity" ? "0.2.0" : "0.1.0",
-        enabled: true,
-      },
+      update: { version, enabled: true },
+      create: { name, version, enabled: true },
     });
   }
+
+  const catalogPluginInstallation = await prisma.moduleInstallation.findUnique({
+    where: { name: "@beyondx/plugin-catalog" },
+  });
 
   for (const [id, description] of IDENTITY_SEED_PERMISSIONS) {
     await prisma.permission.upsert({
@@ -144,24 +155,34 @@ export async function seedDatabase(
     });
   }
 
-  for (const [id, description] of CATALOG_SEED_PERMISSIONS) {
+  for (const [id, description] of PLUGIN_MANAGER_SEED_PERMISSIONS) {
     await prisma.permission.upsert({
       where: { id },
-      update: { description, module: "@beyondx/module-catalog" },
-      create: { id, description, module: "@beyondx/module-catalog" },
+      update: { description, module: "@beyondx/module-plugin-manager" },
+      create: { id, description, module: "@beyondx/module-plugin-manager" },
     });
   }
 
-  await prisma.dataSchema.upsert({
-    where: { key: "catalog.product" },
-    update: { displayName: "Product custom fields", pluralName: "Product custom fields", kind: "SYSTEM_EXTENSION", system: true, publicRead: false },
-    create: { key: "catalog.product", displayName: "Product custom fields", pluralName: "Product custom fields", description: "Schema-driven fields attached to catalog products", kind: "SYSTEM_EXTENSION", system: true, publicRead: false },
-  });
-  await prisma.dataSchema.upsert({
-    where: { key: "catalog.variant" },
-    update: { displayName: "Variant custom fields", pluralName: "Variant custom fields", kind: "SYSTEM_EXTENSION", system: true, publicRead: false },
-    create: { key: "catalog.variant", displayName: "Variant custom fields", pluralName: "Variant custom fields", description: "Schema-driven fields attached to catalog variants", kind: "SYSTEM_EXTENSION", system: true, publicRead: false },
-  });
+  if (catalogPluginInstallation) {
+    for (const [id, description] of CATALOG_SEED_PERMISSIONS) {
+      await prisma.permission.upsert({
+        where: { id },
+        update: { description, module: "@beyondx/plugin-catalog" },
+        create: { id, description, module: "@beyondx/plugin-catalog" },
+      });
+    }
+
+    await prisma.dataSchema.upsert({
+      where: { key: "catalog.product" },
+      update: { displayName: "Product custom fields", pluralName: "Product custom fields", kind: "SYSTEM_EXTENSION", system: true, publicRead: false },
+      create: { key: "catalog.product", displayName: "Product custom fields", pluralName: "Product custom fields", description: "Schema-driven fields attached to catalog products", kind: "SYSTEM_EXTENSION", system: true, publicRead: false },
+    });
+    await prisma.dataSchema.upsert({
+      where: { key: "catalog.variant" },
+      update: { displayName: "Variant custom fields", pluralName: "Variant custom fields", kind: "SYSTEM_EXTENSION", system: true, publicRead: false },
+      create: { key: "catalog.variant", displayName: "Variant custom fields", pluralName: "Variant custom fields", description: "Schema-driven fields attached to catalog variants", kind: "SYSTEM_EXTENSION", system: true, publicRead: false },
+    });
+  }
 
   const superAdmin = await prisma.role.upsert({
     where: { name: "SUPER_ADMIN" },
@@ -179,7 +200,14 @@ export async function seedDatabase(
     create: { name: "USER", description: "Default authenticated user", system: true },
   });
 
-  const allPermissionIds = [...IDENTITY_SEED_PERMISSIONS, ...CONTENT_SEED_PERMISSIONS, ...MEDIA_SEED_PERMISSIONS, ...SCHEMA_SEED_PERMISSIONS, ...CATALOG_SEED_PERMISSIONS].map(([id]) => id);
+  const allPermissionIds = [
+    ...IDENTITY_SEED_PERMISSIONS,
+    ...CONTENT_SEED_PERMISSIONS,
+    ...MEDIA_SEED_PERMISSIONS,
+    ...SCHEMA_SEED_PERMISSIONS,
+    ...PLUGIN_MANAGER_SEED_PERMISSIONS,
+    ...(catalogPluginInstallation ? CATALOG_SEED_PERMISSIONS : []),
+  ].map(([id]) => id);
   const adminPermissionIds = allPermissionIds.filter(
     (id) => !["identity.roles.delete", "identity.audit.read"].includes(id),
   );

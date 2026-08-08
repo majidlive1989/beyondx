@@ -1,7 +1,7 @@
 {
-  "name": "@beyondx/module-catalog",
-  "displayName": "Catalog Module",
-  "version": "0.4.0",
+  "name": "@beyondx/plugin-catalog",
+  "displayName": "Catalog Plugin",
+  "version": "1.0.0",
   "description": "Products, variants and taxonomy with schema-driven custom fields",
   "dependencies": [
     "@beyondx/module-foundation",

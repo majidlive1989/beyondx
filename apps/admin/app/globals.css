@@ -157,3 +157,7 @@ button:disabled{opacity:.55;cursor:not-allowed}
     flex-direction: column;
   }
 }
+
+/* Phase 3 plugin manager */
+.plugin-grid{display:grid;grid-template-columns:1fr;gap:14px}.plugin-card{margin-top:0;display:grid;gap:14px}.plugin-card-header{display:flex;align-items:flex-start;justify-content:space-between;gap:14px}.plugin-card h2{margin:5px 0 0}.plugin-card p{margin:0;color:var(--muted)}.plugin-meta{display:flex;flex-wrap:wrap;gap:8px}.plugin-meta span,.plugin-status{border:1px solid var(--line);border-radius:999px;padding:6px 10px;font-size:.75rem;font-weight:800}.plugin-status.active{color:#b7f7d1;border-color:#24583b;background:#0e2b1d}.plugin-status.warning{color:#fde68a;border-color:#6b5724;background:#30270d}.plugin-status.installed{color:#bfdbfe;border-color:#334f76;background:#13233a}.plugin-status.available{color:var(--muted)}.warning-banner{border:1px solid #6b5724;background:#30270d;color:#fde68a;border-radius:12px;padding:13px 15px;margin:0 0 18px}.plugin-actions{margin-top:auto}
+@media(min-width:820px){.plugin-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}

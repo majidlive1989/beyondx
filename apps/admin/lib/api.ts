@@ -25,6 +25,7 @@ import type {
   MediaAsset,
   Page,
   Permission,
+  PluginRuntimeState,
 } from "./types";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://127.0.0.1:4000";
@@ -609,4 +610,41 @@ export async function updateDynamicRecord(schemaKey: string, id: string, input: 
 
 export function deleteDynamicRecord(schemaKey: string, id: string): Promise<void> {
   return request<void>(`/api/v1/admin/data/${encodeURIComponent(schemaKey)}/${id}`, { method: "DELETE" });
+}
+
+
+export async function listRuntimePlugins(): Promise<PluginRuntimeState[]> {
+  return (await request<{ items: PluginRuntimeState[] }>("/api/v1/runtime/plugins")).items;
+}
+
+export async function listPlugins(): Promise<PluginRuntimeState[]> {
+  return (await request<{ items: PluginRuntimeState[] }>("/api/v1/admin/plugins")).items;
+}
+
+async function pluginAction(
+  id: string,
+  action: "install" | "enable" | "disable" | "uninstall",
+): Promise<PluginRuntimeState> {
+  return (
+    await request<{ plugin: PluginRuntimeState }>(
+      `/api/v1/admin/plugins/${encodeURIComponent(id)}/${action}`,
+      { method: "POST" },
+    )
+  ).plugin;
+}
+
+export function installPlugin(id: string): Promise<PluginRuntimeState> {
+  return pluginAction(id, "install");
+}
+
+export function enablePlugin(id: string): Promise<PluginRuntimeState> {
+  return pluginAction(id, "enable");
+}
+
+export function disablePlugin(id: string): Promise<PluginRuntimeState> {
+  return pluginAction(id, "disable");
+}
+
+export function uninstallPlugin(id: string): Promise<PluginRuntimeState> {
+  return pluginAction(id, "uninstall");
 }

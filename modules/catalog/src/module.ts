@@ -20,9 +20,9 @@ export interface CatalogModuleOptions {
 }
 
 export const CATALOG_MANIFEST: ModuleManifest = Object.freeze({
-  name: "@beyondx/module-catalog",
-  displayName: "Catalog Module",
-  version: "0.4.0",
+  name: "@beyondx/plugin-catalog",
+  displayName: "Catalog Plugin",
+  version: "1.0.0",
   description: "Products, variants, taxonomy and schema-driven custom fields",
   dependencies: [
     "@beyondx/module-foundation",

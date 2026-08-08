@@ -1,29 +1,19 @@
-# Phase 3 — Platform Builder + Catalog verification
+# Phase 3 Verification — Plugin Runtime + Platform Builder + Catalog Plugin
 
-Phase 3 now establishes the Strapi-style platform layer for BeyondX while keeping critical commerce invariants code-defined. The Builder can create Collection Types, Single Types and reusable Components. Fields support Text, Long Text, Rich Text source, UID, Number, Boolean, Date, JSON, Enum, Media, Relation, Component and Dynamic Zone. Product and Variant remain strong Catalog models and can be extended with the same schema engine.
+Phase 3 is complete only after automated quality gates and the plugin lifecycle scenario pass on the target machine.
 
-## Required commands
+## Automated gates
+
+Run:
 
 ```powershell
-pnpm install --no-frozen-lockfile
-pnpm db:generate
-pnpm db:migrate
-pnpm db:seed
 pnpm lint
 pnpm typecheck
 pnpm test
 pnpm build
 ```
 
-Do not reset the database. Phase 3 migrations are:
-
-```text
-20260807000300_phase3_catalog
-20260807000400_phase3_schema_engine
-20260807000500_phase3_platform_builder_v2
-```
-
-For structural verification, temporarily move the real `.env` out of the project:
+Then temporarily move `.env` out of the repository and run:
 
 ```powershell
 Move-Item .env ..\BeyondX.env.backup
@@ -31,52 +21,52 @@ pnpm verify:phase3
 Move-Item ..\BeyondX.env.backup .env
 ```
 
-Expected final line:
+Expected final verifier line:
 
 ```text
-Phase 3 Platform Builder + Catalog structure verified successfully.
+Phase 3 Plugin Runtime + Platform Builder + Catalog Plugin structure verified successfully.
 ```
 
-## Platform Builder scenario
+## Upgrade/install preparation
 
-Open `http://127.0.0.1:3000/builder`.
+After extracting the patch:
 
-1. Create a COMPONENT called `SEO` with key `component.seo`.
-2. Add required TEXT `metaTitle` and LONG_TEXT `metaDescription`.
-3. Create a COLLECTION called `Article` with key `article`.
-4. Add TEXT `title` and UID `slug`; configure slug to generate from `title`.
-5. Add COMPONENT `seo` pointing to `SEO`.
-6. Create two more components such as `Hero` and `Text block`.
-7. Add a DYNAMIC_ZONE `blocks` to Article and allow those components.
-8. Open `/data/article`; the generated form must render the nested SEO fields and add/remove dynamic blocks.
-9. Save an Article with a blank UID; it must generate a URL-safe slug.
-10. Creating another Article with the same generated UID must conflict.
-11. Refresh/restart and verify nested component and dynamic-zone data persists.
-12. Attempt to make components reference each other in a cycle; the API must reject it.
+```powershell
+pnpm install --no-frozen-lockfile
+pnpm db:migrate
+pnpm db:seed
+```
 
-## Catalog integration scenario
+Then restart API/Admin and sign in again so the access token receives the latest Plugin Manager permissions.
 
-1. Select protected `Product custom fields` in Builder.
-2. Add normal fields or a reusable COMPONENT.
-3. Open `/catalog`; Product forms must render those schema-driven fields without Catalog code changes.
-4. Save, refresh and confirm persistence.
-5. Media fields must select assets from Media Library.
+## Manual plugin lifecycle test
 
-## Catalog core scenario
+For an existing Phase 3 database, Catalog is migrated to an installed/enabled plugin so current products remain available.
 
-1. Create a Brand and Category.
-2. Create Attributes and values.
-3. Create a DRAFT Product and choose Media.
-4. Create a Variant with a globally unique SKU.
-5. Duplicate SKU must conflict.
-6. Two values from the same Attribute on one Variant must be rejected.
-7. Product can become ACTIVE only after an active Variant exists.
-8. Public Catalog APIs return only ACTIVE data.
+1. Open `Settings -> Plugins` and verify **Catalog / Active**.
+2. Confirm `Catalog -> Products` and `Catalog setup` are visible.
+3. Disable Catalog. The UI must display **Restart required**.
+4. Restart the BeyondX API and refresh/sign in again.
+5. Confirm the Catalog menu disappears.
+6. Request `/api/v1/admin/catalog/products` after restart; it must be a route-not-found response because the Catalog plugin was not loaded.
+7. Return to `Settings -> Plugins`. Catalog must show Installed/Disabled.
+8. Enable Catalog, restart the API and sign in again.
+9. Confirm Catalog navigation and Catalog APIs return.
+10. Confirm existing brands/categories/products/variants are still present.
+11. Disable Catalog again, restart, then Uninstall. Catalog must become Available while product data remains preserved in storage.
+12. Install -> Enable -> Restart -> sign in again. Catalog must return with the preserved data.
 
-## Regression checks
+## Fresh-install behavior
 
-- Identity login and RBAC still work.
-- `/media`, `/content`, and `/content-types` still open.
-- System extension schemas cannot be deleted.
-- Component schemas have no standalone records or public endpoint.
-- Inventory, Cart, Checkout and Orders remain Phase 4.
+On a fresh database the seed must not create `@beyondx/plugin-catalog`. Therefore the initial Admin has no Product/Catalog navigation. Catalog appears only after Plugin Manager installation and activation.
+
+## Builder regression
+
+Also confirm the Phase 3 Schema Engine remains functional:
+
+- create a Collection in Structure Builder;
+- see it appear under Content;
+- create/edit/delete records;
+- verify required-field validation;
+- verify component/dynamic-zone data survives refresh;
+- when Catalog is active, `catalog.product` custom fields continue to appear in the normal Product form.

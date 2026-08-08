@@ -78,9 +78,6 @@ importers:
       '@beyondx/logger':
         specifier: workspace:*
         version: link:../../packages/logger
-      '@beyondx/module-catalog':
-        specifier: workspace:*
-        version: link:../../modules/catalog
       '@beyondx/module-content':
         specifier: workspace:*
         version: link:../../modules/content
@@ -93,12 +90,18 @@ importers:
       '@beyondx/module-media':
         specifier: workspace:*
         version: link:../../modules/media
+      '@beyondx/module-plugin-manager':
+        specifier: workspace:*
+        version: link:../../modules/plugin-manager
       '@beyondx/module-schema':
         specifier: workspace:*
         version: link:../../modules/schema
       '@beyondx/module-system':
         specifier: workspace:*
         version: link:../../packages/module-system
+      '@beyondx/plugin-catalog':
+        specifier: workspace:*
+        version: link:../../plugins/catalog
       '@beyondx/validation':
         specifier: workspace:*
         version: link:../../packages/validation
@@ -232,6 +235,28 @@ importers:
         specifier: workspace:*
         version: link:../../packages/testing
 
+  modules/plugin-manager:
+    dependencies:
+      '@beyondx/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+      '@beyondx/database':
+        specifier: workspace:*
+        version: link:../../packages/database
+      '@beyondx/module-system':
+        specifier: workspace:*
+        version: link:../../packages/module-system
+      '@beyondx/validation':
+        specifier: workspace:*
+        version: link:../../packages/validation
+      zod:
+        specifier: 3.25.76
+        version: 3.25.76
+    devDependencies:
+      '@beyondx/testing':
+        specifier: workspace:*
+        version: link:../../packages/testing
+
   modules/schema:
     dependencies:
       '@beyondx/core':
@@ -310,6 +335,22 @@ importers:
       zod:
         specifier: 3.25.76
         version: 3.25.76
+
+  plugins/catalog:
+    dependencies:
+      '@beyondx/database':
+        specifier: workspace:*
+        version: link:../../packages/database
+      '@beyondx/module-catalog':
+        specifier: workspace:*
+        version: link:../../modules/catalog
+      '@beyondx/module-system':
+        specifier: workspace:*
+        version: link:../../packages/module-system
+    devDependencies:
+      '@beyondx/testing':
+        specifier: workspace:*
+        version: link:../../packages/testing
 
 packages:
 

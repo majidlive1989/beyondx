@@ -46,6 +46,12 @@ function createSeedClient(): {
         state.modules.add(input.where.name);
         return Promise.resolve({ id: input.where.name });
       },
+      findUnique: (input: { where: { name: string } }) =>
+        Promise.resolve(
+          state.modules.has(input.where.name)
+            ? { id: input.where.name, name: input.where.name, enabled: true }
+            : null,
+        ),
     },
     permission: {
       upsert: (input: { where: { id: string } }) => {
@@ -121,8 +127,8 @@ describe("Phase 3 database seed", () => {
     await seedDatabase(client, environment);
 
     expect(state.modules.size).toBe(9);
-    expect(state.permissions.size).toBe(43);
-    expect(state.schemas.size).toBe(2);
+    expect(state.permissions.size).toBe(37);
+    expect(state.schemas.size).toBe(0);
     expect(state.roles.size).toBe(3);
     expect(state.users.size).toBe(1);
     expect(state.userRoles.size).toBe(1);
