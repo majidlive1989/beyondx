@@ -99,12 +99,18 @@ importers:
       '@beyondx/module-system':
         specifier: workspace:*
         version: link:../../packages/module-system
+      '@beyondx/module-theme':
+        specifier: workspace:*
+        version: link:../../modules/theme
       '@beyondx/plugin-catalog':
         specifier: workspace:*
         version: link:../../plugins/catalog
       '@beyondx/plugin-commerce':
         specifier: workspace:*
         version: link:../../plugins/commerce
+      '@beyondx/plugin-discussion':
+        specifier: workspace:*
+        version: link:../../plugins/discussion
       '@beyondx/validation':
         specifier: workspace:*
         version: link:../../packages/validation
@@ -188,6 +194,25 @@ importers:
         version: link:../../packages/testing
 
   modules/content:
+    dependencies:
+      '@beyondx/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+      '@beyondx/database':
+        specifier: workspace:*
+        version: link:../../packages/database
+      '@beyondx/validation':
+        specifier: workspace:*
+        version: link:../../packages/validation
+      zod:
+        specifier: 3.25.76
+        version: 3.25.76
+    devDependencies:
+      '@beyondx/testing':
+        specifier: workspace:*
+        version: link:../../packages/testing
+
+  modules/discussion:
     dependencies:
       '@beyondx/core':
         specifier: workspace:*
@@ -301,6 +326,16 @@ importers:
         specifier: workspace:*
         version: link:../../packages/testing
 
+  modules/theme:
+    dependencies:
+      '@beyondx/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+    devDependencies:
+      '@beyondx/testing':
+        specifier: workspace:*
+        version: link:../../packages/testing
+
   packages/config:
     dependencies:
       '@beyondx/core':
@@ -352,6 +387,8 @@ importers:
         specifier: workspace:*
         version: link:../core
 
+  packages/theme-sdk: {}
+
   packages/validation:
     dependencies:
       '@beyondx/core':
@@ -385,6 +422,22 @@ importers:
       '@beyondx/module-commerce':
         specifier: workspace:*
         version: link:../../modules/commerce
+      '@beyondx/module-system':
+        specifier: workspace:*
+        version: link:../../packages/module-system
+    devDependencies:
+      '@beyondx/testing':
+        specifier: workspace:*
+        version: link:../../packages/testing
+
+  plugins/discussion:
+    dependencies:
+      '@beyondx/database':
+        specifier: workspace:*
+        version: link:../../packages/database
+      '@beyondx/module-discussion':
+        specifier: workspace:*
+        version: link:../../modules/discussion
       '@beyondx/module-system':
         specifier: workspace:*
         version: link:../../packages/module-system

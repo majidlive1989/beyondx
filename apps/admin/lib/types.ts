@@ -372,3 +372,35 @@ export interface CommerceOrder {
   items: CommerceOrderItem[];
   checkoutSession?: { warehouseId: string; warehouse?: CommerceWarehouse };
 }
+
+export type DiscussionSourceType = "CONTENT" | "PRODUCT";
+export type DiscussionKind = "COMMENT" | "REVIEW";
+export type DiscussionStatus = "PENDING" | "APPROVED" | "SPAM" | "TRASH";
+
+export interface DiscussionSettings {
+  commentsEnabled: boolean;
+  reviewsEnabled: boolean;
+  ratingEnabled: boolean;
+  verifiedPurchaseOnly: boolean;
+  notifyOnNew: boolean;
+}
+
+export interface DiscussionEntry {
+  id: string;
+  sourceType: DiscussionSourceType;
+  sourceId: string;
+  sourceLabel: string;
+  kind: DiscussionKind;
+  status: DiscussionStatus;
+  parentId: string | null;
+  authorUserId: string | null;
+  authorName: string;
+  authorEmail: string;
+  body: string;
+  rating: number | null;
+  verifiedPurchase: boolean;
+  moderatedAt: string | null;
+  moderatedByUserId: string | null;
+  createdAt: string;
+  updatedAt: string;
+}

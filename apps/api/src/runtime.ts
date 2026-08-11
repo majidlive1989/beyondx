@@ -21,8 +21,10 @@ import { ContentModule } from "@beyondx/module-content";
 import { MediaModule } from "@beyondx/module-media";
 import { SchemaModule } from "@beyondx/module-schema";
 import { PluginManagerModule } from "@beyondx/module-plugin-manager";
+import { ThemeModule } from "@beyondx/module-theme";
 import { createCatalogPlugin } from "@beyondx/plugin-catalog";
 import { createCommercePlugin } from "@beyondx/plugin-commerce";
+import { createDiscussionPlugin } from "@beyondx/plugin-discussion";
 import { PrismaPluginStateStore } from "./plugin-state-store.js";
 import { Redis } from "ioredis";
 import type { ApplicationDependencies } from "./types.js";
@@ -64,6 +66,7 @@ export async function createRuntimeDependencies(): Promise<ApplicationDependenci
   const pluginRegistry = new PluginRegistry();
   pluginRegistry.register(createCatalogPlugin(database));
   pluginRegistry.register(createCommercePlugin(database));
+  pluginRegistry.register(createDiscussionPlugin(database));
   const pluginRuntime = new PluginRuntime(pluginRegistry, new PrismaPluginStateStore(database));
 
   const registry = new ModuleRegistry();
@@ -93,6 +96,7 @@ export async function createRuntimeDependencies(): Promise<ApplicationDependenci
     allowedMimeTypes: config.MEDIA_ALLOWED_MIME_TYPES,
   }));
   registry.register(new SchemaModule({ database }));
+  registry.register(new ThemeModule({ isPluginActive: (packageName) => pluginRuntime.isActivePackage(packageName) }));
   registry.register(new PluginManagerModule({ database, runtime: pluginRuntime }));
 
   const coreModuleNames = registry.list().map((manifest) => manifest.name);

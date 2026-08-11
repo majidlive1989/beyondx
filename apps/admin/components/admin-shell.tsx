@@ -3,8 +3,8 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { listRuntimeDataSchemas, listRuntimePlugins } from "@/lib/api";
-import type { DataSchemaDefinition, PluginRuntimeState } from "@/lib/types";
+import { listContentTypes, listRuntimeDataSchemas, listRuntimePlugins } from "@/lib/api";
+import type { ContentType, DataSchemaDefinition, PluginRuntimeState } from "@/lib/types";
 import { useAuth } from "./auth-provider";
 
 interface NavItem {
@@ -28,10 +28,21 @@ function isActive(pathname: string, item: NavItem): boolean {
   return pathname === item.href || (item.href !== "/dashboard" && pathname.startsWith(`${item.href}/`));
 }
 
+function displayNavLabel(value: string): string {
+  const trimmed = value.trim();
+  if (!trimmed) return value;
+  if (/^[a-z0-9 _-]+$/.test(trimmed)) {
+    if (trimmed.toLowerCase() === "faq" || trimmed.toLowerCase() === "faqs") return "FAQ";
+    return trimmed.charAt(0).toUpperCase() + trimmed.slice(1);
+  }
+  return trimmed;
+}
+
 export function AdminShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const { user, loading, logout } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [contentTypes, setContentTypes] = useState<ContentType[]>([]);
   const [contentSchemas, setContentSchemas] = useState<DataSchemaDefinition[]>([]);
   const [runtimePlugins, setRuntimePlugins] = useState<PluginRuntimeState[]>([]);
 
@@ -64,21 +75,45 @@ export function AdminShell({ children }: { children: ReactNode }) {
   }, [user]);
 
   useEffect(() => {
-    if (!user?.permissions.includes("schema.records.read")) {
+    if (!user) {
+      setContentTypes([]);
       setContentSchemas([]);
       return;
     }
 
     let active = true;
-    void listRuntimeDataSchemas()
-      .then((result) => {
-        if (!active) return;
-        setContentSchemas(result.items.filter((schema) => schema.kind === "COLLECTION" || schema.kind === "SINGLE"));
-      })
-      .catch(() => {
-        if (active) setContentSchemas([]);
-      });
+    const jobs: Promise<void>[] = [];
 
+    if (user.permissions.includes("content.types.read") && user.permissions.includes("content.entries.read")) {
+      jobs.push(
+        listContentTypes()
+          .then((items) => {
+            if (active) setContentTypes(items);
+          })
+          .catch(() => {
+            if (active) setContentTypes([]);
+          }),
+      );
+    } else {
+      setContentTypes([]);
+    }
+
+    if (user.permissions.includes("schema.records.read")) {
+      jobs.push(
+        listRuntimeDataSchemas()
+          .then((result) => {
+            if (!active) return;
+            setContentSchemas(result.items.filter((schema) => schema.kind === "COLLECTION" || schema.kind === "SINGLE"));
+          })
+          .catch(() => {
+            if (active) setContentSchemas([]);
+          }),
+      );
+    } else {
+      setContentSchemas([]);
+    }
+
+    void Promise.all(jobs);
     return () => {
       active = false;
     };
@@ -87,9 +122,15 @@ export function AdminShell({ children }: { children: ReactNode }) {
   const groups = useMemo<NavGroup[]>(() => {
     if (!user) return [];
 
+    const publishableContent: NavItem[] = contentTypes.map((type) => ({
+      href: `/content/${encodeURIComponent(type.id)}`,
+      label: displayNavLabel(type.name),
+      permission: "content.entries.read",
+    }));
+
     const generatedContent: NavItem[] = contentSchemas.map((schema) => ({
       href: `/data/${encodeURIComponent(schema.key)}`,
-      label: schema.kind === "SINGLE" ? schema.displayName : schema.pluralName,
+      label: displayNavLabel(schema.kind === "SINGLE" ? schema.displayName : schema.pluralName),
       permission: "schema.records.read",
     }));
 
@@ -107,15 +148,19 @@ export function AdminShell({ children }: { children: ReactNode }) {
       }
     }
 
+    const contentPluginItems = pluginGroups.get("Content") ?? [];
+    pluginGroups.delete("Content");
+
+    const contentItems: NavItem[] = [
+      { href: "/content", label: "Content", exact: true },
+      ...publishableContent,
+      ...generatedContent,
+      ...contentPluginItems,
+    ];
+
     const candidateGroups: NavGroup[] = [
       { label: "Overview", items: [{ href: "/dashboard", label: "Dashboard", exact: true }] },
-      {
-        label: "Content",
-        items: [
-          ...generatedContent,
-          { href: "/content", label: "CMS content", permission: "content.entries.read" },
-        ],
-      },
+      { label: "Content", items: contentItems },
       ...[...pluginGroups.entries()].map(([label, items]) => ({ label, items })),
       { label: "Media", items: [{ href: "/media", label: "Media library", permission: "media.assets.read" }] },
       {
@@ -130,7 +175,6 @@ export function AdminShell({ children }: { children: ReactNode }) {
         items: [
           { href: "/plugins", label: "Plugins", permission: "plugins.read" },
           { href: "/builder", label: "Structure builder", permission: "schema.builder.read" },
-          { href: "/content-types", label: "CMS models", permission: "content.types.read" },
           { href: "/sessions", label: "Sessions", permission: "identity.sessions.manage" },
           { href: "/audit", label: "Audit log", permission: "identity.audit.read" },
           { href: "/profile", label: "Profile" },
@@ -141,7 +185,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
     return candidateGroups
       .map((group) => ({ ...group, items: group.items.filter((item) => canSee(item, user.permissions)) }))
       .filter((group) => group.items.length > 0);
-  }, [contentSchemas, runtimePlugins, user]);
+  }, [contentSchemas, contentTypes, runtimePlugins, user]);
 
   if (loading || !user) {
     return <main className="centered"><div className="loading-card">Loading BeyondX…</div></main>;

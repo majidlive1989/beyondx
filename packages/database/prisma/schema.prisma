@@ -580,6 +580,68 @@ model EntityExtension {
 }
 
 
+
+enum DiscussionSourceType {
+  CONTENT
+  PRODUCT
+}
+
+enum DiscussionKind {
+  COMMENT
+  REVIEW
+}
+
+enum DiscussionStatus {
+  PENDING
+  APPROVED
+  SPAM
+  TRASH
+}
+
+model DiscussionSettings {
+  id                   String               @id @default(cuid())
+  sourceType           DiscussionSourceType
+  sourceId             String
+  commentsEnabled      Boolean              @default(true)
+  reviewsEnabled       Boolean              @default(false)
+  ratingEnabled        Boolean              @default(false)
+  verifiedPurchaseOnly Boolean              @default(false)
+  notifyOnNew          Boolean              @default(true)
+  createdAt            DateTime             @default(now())
+  updatedAt            DateTime             @updatedAt
+
+  @@unique([sourceType, sourceId])
+  @@map("discussion_settings")
+}
+
+model DiscussionEntry {
+  id                  String               @id @default(cuid())
+  sourceType          DiscussionSourceType
+  sourceId            String
+  kind                DiscussionKind
+  status              DiscussionStatus     @default(PENDING)
+  parentId            String?
+  authorUserId        String?
+  authorName          String
+  authorEmail         String
+  body                String
+  rating              Int?
+  verifiedPurchase    Boolean              @default(false)
+  moderatedAt         DateTime?
+  moderatedByUserId   String?
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  parent              DiscussionEntry?     @relation("DiscussionReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies             DiscussionEntry[]    @relation("DiscussionReplies")
+
+  @@index([sourceType, sourceId, status, createdAt])
+  @@index([kind, status, createdAt])
+  @@index([status, createdAt])
+  @@index([parentId])
+  @@map("discussion_entries")
+}
+
+
 enum CommerceCartStatus {
   ACTIVE
   CONVERTED

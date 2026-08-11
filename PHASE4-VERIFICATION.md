@@ -1,36 +1,39 @@
-# Phase 4 Verification
+# Phase 4 Verification — CMS Experience
 
-Phase 4 is complete only when all automated and manual gates pass on the target machine.
+Phase 4 remains **IN PROGRESS**. Do not tag it complete until all CMS Experience milestones and manual tests pass.
 
-## Automated
+## Required quality gates
 
-- `pnpm lint`
-- `pnpm typecheck`
-- `pnpm test`
-- `pnpm build`
-- `pnpm verify:phase4` with `.env` temporarily outside the repository root
+```powershell
+pnpm install --no-frozen-lockfile
+pnpm db:generate
+pnpm db:migrate
+pnpm lint
+pnpm typecheck
+pnpm test
+pnpm build
+```
 
-## Manual hot-plugin lifecycle
+For structural verification, temporarily move `.env` outside the project root, then run:
 
-1. Keep API and Admin running.
-2. Disable Catalog while Commerce is disabled: Catalog navigation disappears immediately and Catalog API returns 404, without restarting API.
-3. Enable Catalog: navigation and API return immediately.
-4. Install + enable Commerce: Commerce navigation appears immediately.
-5. Attempt to disable Catalog while Commerce is active: operation is rejected because Commerce depends on Catalog.
-6. Disable Commerce: Commerce navigation disappears immediately and Commerce API returns 404; data remains.
-7. Enable Commerce again: navigation/routes return without restart.
+```powershell
+pnpm verify:phase4
+```
 
-## Manual commerce workflow
+Expected final line for this milestone:
 
-1. Create an active Catalog product and active variant.
-2. In Commerce, create a warehouse.
-3. Set a price in integer minor units (for example USD `1299` = $12.99).
-4. Add stock to the variant and confirm available quantity.
-5. `POST /api/v1/commerce/carts`, store returned `cartToken` securely for the test.
-6. Add an item using `x-cart-token`.
-7. Checkout with warehouse + a unique idempotency key.
-8. Confirm available stock decreases by the reserved quantity while on-hand is unchanged.
-9. Submit the same idempotency key again and confirm the same order is returned rather than duplicated.
-10. Confirm the order: reserved stock and on-hand both decrease and a SALE movement is recorded.
-11. Alternative path: create another order then cancel it; reserved stock is released and on-hand is unchanged.
-12. Restart API/Admin and confirm prices, warehouses, stock, orders and plugin state persist.
+```text
+Phase 4 CMS Experience + Discussion Plugin structure verified successfully.
+```
+
+## Manual Discussion test
+
+1. Settings → Plugins → install and enable **Comments & Reviews**.
+2. Do not restart the API; confirm `Comments & reviews` appears under Content immediately.
+3. Open a published content entry. The **Discussion** section should appear and allow comments to be enabled/disabled.
+4. Submit a public comment through Scalar (`POST /api/v1/discussions`). It must enter `PENDING`.
+5. Open Comments & reviews and approve it. The public thread endpoint must then return it.
+6. Mark it Spam, return it to Pending, approve it, reply to it, Trash it, then permanently delete it.
+7. For an active product, submit a `REVIEW` with rating 1–5. The moderation inbox must show the product source and rating.
+8. Disable the plugin without an API restart. Its menu and APIs must become inactive while data remains in the database.
+9. Re-enable it and confirm the moderation data returns.

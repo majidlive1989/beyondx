@@ -26,6 +26,11 @@ import type {
   DataSchemaDefinition,
   DataSchemaKind,
   DynamicDataRecord,
+  DiscussionEntry,
+  DiscussionKind,
+  DiscussionSettings,
+  DiscussionSourceType,
+  DiscussionStatus,
   MediaAsset,
   Page,
   Permission,
@@ -709,4 +714,61 @@ export async function confirmCommerceOrder(id: string): Promise<CommerceOrder> {
 
 export async function cancelCommerceOrder(id: string): Promise<CommerceOrder> {
   return (await request<{ order: CommerceOrder }>(`/api/v1/admin/commerce/orders/${encodeURIComponent(id)}/cancel`, { method: "POST" })).order;
+}
+
+
+export function listDiscussions(input: {
+  search?: string;
+  sourceType?: DiscussionSourceType;
+  sourceId?: string;
+  kind?: DiscussionKind;
+  status?: DiscussionStatus;
+  page?: number;
+  pageSize?: number;
+} = {}): Promise<Page<DiscussionEntry>> {
+  const query = new URLSearchParams({
+    page: String(input.page ?? 1),
+    pageSize: String(input.pageSize ?? 50),
+  });
+  if (input.search) query.set("search", input.search);
+  if (input.sourceType) query.set("sourceType", input.sourceType);
+  if (input.sourceId) query.set("sourceId", input.sourceId);
+  if (input.kind) query.set("kind", input.kind);
+  if (input.status) query.set("status", input.status);
+  return request<Page<DiscussionEntry>>(`/api/v1/admin/discussions?${query}`);
+}
+
+export async function setDiscussionStatus(id: string, status: DiscussionStatus): Promise<DiscussionEntry> {
+  return (await request<{ entry: DiscussionEntry }>(`/api/v1/admin/discussions/${encodeURIComponent(id)}/status`, {
+    method: "PATCH",
+    body: JSON.stringify({ status }),
+  })).entry;
+}
+
+export async function replyToDiscussion(id: string, body: string, authorName?: string): Promise<DiscussionEntry> {
+  return (await request<{ entry: DiscussionEntry }>(`/api/v1/admin/discussions/${encodeURIComponent(id)}/replies`, {
+    method: "POST",
+    body: JSON.stringify({ body, ...(authorName ? { authorName } : {}) }),
+  })).entry;
+}
+
+export function deleteDiscussion(id: string): Promise<void> {
+  return request<void>(`/api/v1/admin/discussions/${encodeURIComponent(id)}`, { method: "DELETE" });
+}
+
+export async function getDiscussionSettings(sourceType: DiscussionSourceType, sourceId: string): Promise<DiscussionSettings> {
+  return (await request<{ settings: DiscussionSettings }>(
+    `/api/v1/admin/discussions/settings/${sourceType}/${encodeURIComponent(sourceId)}`,
+  )).settings;
+}
+
+export async function updateDiscussionSettings(
+  sourceType: DiscussionSourceType,
+  sourceId: string,
+  input: DiscussionSettings,
+): Promise<DiscussionSettings> {
+  return (await request<{ settings: DiscussionSettings }>(
+    `/api/v1/admin/discussions/settings/${sourceType}/${encodeURIComponent(sourceId)}`,
+    { method: "PUT", body: JSON.stringify(input) },
+  )).settings;
 }

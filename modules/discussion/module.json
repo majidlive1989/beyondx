@@ -1,0 +1,6 @@
+{
+  "name": "@beyondx/plugin-discussion",
+  "displayName": "Discussion Plugin",
+  "version": "1.0.0",
+  "description": "Comments, product reviews, ratings, replies and moderation"
+}
