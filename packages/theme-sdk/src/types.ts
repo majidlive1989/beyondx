@@ -21,6 +21,29 @@ export interface ThemeDeliveryManifest {
   endpoints: Record<string, string | null>;
 }
 
+
+export type MediaKind = "IMAGE" | "FILE";
+export type MediaVisibility = "PUBLIC" | "PRIVATE";
+
+export interface PublicMediaAsset {
+  id: string;
+  originalName: string;
+  fileName: string;
+  mimeType: string;
+  kind: MediaKind;
+  sizeBytes: number;
+  checksumSha256: string;
+  width: number | null;
+  height: number | null;
+  altText: string | null;
+  title: string | null;
+  metadata: Record<string, unknown> | null;
+  visibility: "PUBLIC";
+  contentUrl: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface ContentRelation {
   fieldKey: string;
   targetEntryId: string;

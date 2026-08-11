@@ -8,12 +8,12 @@ export interface ThemeModuleOptions {
 export const THEME_MANIFEST: ModuleManifest = Object.freeze({
   name: "@beyondx/module-theme",
   displayName: "Theme Delivery Bridge",
-  version: "0.6.0",
+  version: "0.6.1",
   description: "Public theme capability discovery and stable headless delivery contract",
-  dependencies: ["@beyondx/module-foundation", "@beyondx/module-content", "@beyondx/module-schema"],
+  dependencies: ["@beyondx/module-foundation", "@beyondx/module-content", "@beyondx/module-media", "@beyondx/module-schema"],
   optionalDependencies: ["@beyondx/plugin-catalog", "@beyondx/plugin-discussion", "@beyondx/plugin-commerce"],
   permissions: [],
-  capabilities: ["theme.delivery", "theme.capability-discovery", "theme.sdk"],
+  capabilities: ["theme.delivery", "theme.capability-discovery", "theme.sdk", "theme.public-media"],
 });
 
 export class ThemeModule implements BeyondXModule {

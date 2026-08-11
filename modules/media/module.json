@@ -1,7 +1,7 @@
 {
   "name": "@beyondx/module-media",
   "displayName": "Media Module",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Media library, secure uploads, pluggable storage and image metadata management",
   "dependencies": ["@beyondx/module-foundation", "@beyondx/module-identity"],
   "optionalDependencies": [],
@@ -15,6 +15,7 @@
     "media.library",
     "media.upload",
     "media.storage",
-    "media.images"
+    "media.images",
+    "media.public-delivery"
   ]
 }

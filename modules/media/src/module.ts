@@ -26,7 +26,7 @@ export interface MediaModuleOptions {
 export const MEDIA_MANIFEST: ModuleManifest = Object.freeze({
   name: "@beyondx/module-media",
   displayName: "Media Module",
-  version: "0.3.0",
+  version: "0.3.1",
   description: "Media library, secure uploads, pluggable storage and image metadata management",
   dependencies: ["@beyondx/module-foundation", "@beyondx/module-identity"],
   optionalDependencies: [],
@@ -36,6 +36,7 @@ export const MEDIA_MANIFEST: ModuleManifest = Object.freeze({
     "media.upload",
     "media.storage",
     "media.images",
+    "media.public-delivery",
   ],
 });
 

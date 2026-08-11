@@ -8,8 +8,14 @@ import { parseInput } from "@beyondx/validation";
 import { z } from "zod";
 import type { MediaService } from "../application/media-service.js";
 import type { MediaAsset, MediaListInput, MediaUpdateInput } from "../domain/models.js";
+import {
+  getMediaVisibility,
+  getUserMediaMetadata,
+  type MediaVisibility,
+} from "../domain/public-delivery.js";
 
 const idParamsSchema = z.object({ id: z.string().min(1) });
+const visibilityBodySchema = z.object({ visibility: z.enum(["PRIVATE", "PUBLIC"]) });
 
 const listSchema = z
   .object({
@@ -48,14 +54,60 @@ const updateSchema = z
 
 export function createMediaRoutes(service: MediaService): HttpRouteDefinition[] {
   return [
+    {
+      method: "GET",
+      path: "/api/v1/media/:id",
+      summary: "Read public media metadata",
+      tags: ["Media"],
+      public: true,
+      schema: {
+        params: idParamsJsonSchema,
+        response: { 200: publicMediaEnvelopeSchema },
+      },
+      handler: async (context) => {
+        const { id } = parseInput(idParamsSchema, context.params);
+        const asset = await service.publicGet(id);
+        return { body: { asset: publicDeliveryAsset(asset) } };
+      },
+    },
+    {
+      method: "GET",
+      path: "/api/v1/media/:id/content",
+      summary: "Deliver public media file content",
+      tags: ["Media"],
+      public: true,
+      schema: { params: idParamsJsonSchema },
+      handler: async (context) => {
+        const { id } = parseInput(idParamsSchema, context.params);
+        const { asset, data } = await service.publicContent(id);
+        return {
+          headers: {
+            "content-type": asset.mimeType,
+            "content-length": String(data.byteLength),
+            "content-disposition": `inline; filename="${headerFileName(asset.fileName)}"`,
+            "cache-control": "public, max-age=86400, stale-while-revalidate=604800",
+            "etag": `"sha256-${asset.checksumSha256}"`,
+            "x-content-type-options": "nosniff",
+            "cross-origin-resource-policy": "cross-origin",
+          },
+          body: Buffer.from(data),
+        };
+      },
+    },
     protectedRoute(
       "GET",
       "/api/v1/admin/media",
       "List media library assets",
       "media.assets.read",
-      async (context) => ({
-        body: await service.list(parseInput(listSchema, context.query ?? {})),
-      }),
+      async (context) => {
+        const page = await service.list(parseInput(listSchema, context.query ?? {}));
+        return {
+          body: {
+            ...page,
+            items: page.items.map(publicAsset),
+          },
+        };
+      },
       { querystring: listQueryJsonSchema, response: { 200: mediaPageSchema } },
     ),
     {
@@ -82,6 +134,7 @@ export function createMediaRoutes(service: MediaService): HttpRouteDefinition[] 
             ...(body.title === undefined ? {} : { title: body.title }),
             ...(body.altText === undefined ? {} : { altText: body.altText }),
             ...(body.metadata === undefined ? {} : { metadata: body.metadata }),
+            ...(body.visibility === undefined ? {} : { visibility: body.visibility }),
           },
           requestMetadata(context),
         );
@@ -116,6 +169,27 @@ export function createMediaRoutes(service: MediaService): HttpRouteDefinition[] 
       {
         params: idParamsJsonSchema,
         body: updateBodyJsonSchema,
+        response: { 200: mediaAssetEnvelopeSchema },
+      },
+    ),
+    protectedRoute(
+      "PATCH",
+      "/api/v1/admin/media/:id/visibility",
+      "Set media public visibility",
+      "media.assets.update",
+      async (context) => {
+        const { id } = parseInput(idParamsSchema, context.params);
+        const { visibility } = parseInput(visibilityBodySchema, context.body);
+        const asset = await service.setVisibility(
+          id,
+          visibility,
+          requestMetadata(context),
+        );
+        return { body: { asset: publicAsset(asset) } };
+      },
+      {
+        params: idParamsJsonSchema,
+        body: visibilityBodyJsonSchema,
         response: { 200: mediaAssetEnvelopeSchema },
       },
     ),
@@ -210,11 +284,13 @@ function readMultipartFields(body: unknown): {
   title?: string;
   altText?: string;
   metadata?: Record<string, unknown> | null;
+  visibility?: MediaVisibility;
 } {
   const record = asRecord(body);
   const title = readString(record.title);
   const altText = readString(record.altText);
   const metadataRaw = readString(record.metadata);
+  const visibility = readVisibility(record.visibility);
   let metadata: Record<string, unknown> | null | undefined;
   if (metadataRaw !== undefined && metadataRaw !== "") {
     try {
@@ -237,11 +313,23 @@ function readMultipartFields(body: unknown): {
     ...(title === undefined ? {} : { title }),
     ...(altText === undefined ? {} : { altText }),
     ...(metadata === undefined ? {} : { metadata }),
+    ...(visibility === undefined ? {} : { visibility }),
   };
 }
 
 function readString(value: unknown): string | undefined {
   return typeof value === "string" ? value : undefined;
+}
+
+function readVisibility(value: unknown): MediaVisibility | undefined {
+  const text = readString(value);
+  if (text === undefined || text === "") return undefined;
+  if (text === "PRIVATE" || text === "PUBLIC") return text;
+  throw new AppError({
+    code: "MEDIA_VISIBILITY_INVALID",
+    message: "Media visibility must be PRIVATE or PUBLIC",
+    statusCode: 400,
+  });
 }
 
 function readHeader(context: HttpRequestContext, name: string): string | undefined {
@@ -260,11 +348,40 @@ function headerFileName(value: string): string {
 }
 
 function publicAsset(asset: MediaAsset) {
+  const visibility = getMediaVisibility(asset);
   return {
     ...asset,
+    metadata: getUserMediaMetadata(asset.metadata),
+    visibility,
+    contentUrl: visibility === "PUBLIC" ? publicContentUrl(asset.id) : null,
     createdAt: asset.createdAt.toISOString(),
     updatedAt: asset.updatedAt.toISOString(),
   };
+}
+
+function publicDeliveryAsset(asset: MediaAsset) {
+  return {
+    id: asset.id,
+    originalName: asset.originalName,
+    fileName: asset.fileName,
+    mimeType: asset.mimeType,
+    kind: asset.kind,
+    sizeBytes: asset.sizeBytes,
+    checksumSha256: asset.checksumSha256,
+    width: asset.width,
+    height: asset.height,
+    altText: asset.altText,
+    title: asset.title,
+    metadata: getUserMediaMetadata(asset.metadata),
+    visibility: "PUBLIC" as const,
+    contentUrl: publicContentUrl(asset.id),
+    createdAt: asset.createdAt.toISOString(),
+    updatedAt: asset.updatedAt.toISOString(),
+  };
+}
+
+function publicContentUrl(id: string): string {
+  return `/api/v1/media/${encodeURIComponent(id)}/content`;
 }
 
 const idParamsJsonSchema = {
@@ -297,6 +414,7 @@ const multipartBodySchema = {
     title: multipartField(160),
     altText: multipartField(500),
     metadata: multipartField(10_000),
+    visibility: multipartField(16),
   },
 };
 
@@ -307,6 +425,15 @@ const updateBodyJsonSchema = {
     title: { anyOf: [{ type: "string", maxLength: 160 }, { type: "null" }] },
     altText: { anyOf: [{ type: "string", maxLength: 500 }, { type: "null" }] },
     metadata: { anyOf: [{ type: "object", additionalProperties: true }, { type: "null" }] },
+  },
+};
+
+const visibilityBodyJsonSchema = {
+  type: "object",
+  required: ["visibility"],
+  additionalProperties: false,
+  properties: {
+    visibility: { type: "string", enum: ["PRIVATE", "PUBLIC"] },
   },
 };
 
@@ -329,6 +456,8 @@ const mediaAssetSchema = {
     "uploadedByUserId",
     "createdAt",
     "updatedAt",
+    "visibility",
+    "contentUrl",
   ],
   properties: {
     id: { type: "string" },
@@ -347,6 +476,8 @@ const mediaAssetSchema = {
     uploadedByUserId: { anyOf: [{ type: "string" }, { type: "null" }] },
     createdAt: { type: "string", format: "date-time" },
     updatedAt: { type: "string", format: "date-time" },
+    visibility: { type: "string", enum: ["PRIVATE", "PUBLIC"] },
+    contentUrl: { anyOf: [{ type: "string" }, { type: "null" }] },
   },
 };
 
@@ -354,6 +485,40 @@ const mediaAssetEnvelopeSchema = {
   type: "object",
   required: ["asset"],
   properties: { asset: mediaAssetSchema },
+};
+
+
+const publicMediaAssetSchema = {
+  type: "object",
+  required: [
+    "id", "originalName", "fileName", "mimeType", "kind", "sizeBytes",
+    "checksumSha256", "width", "height", "altText", "title", "metadata",
+    "visibility", "contentUrl", "createdAt", "updatedAt",
+  ],
+  properties: {
+    id: { type: "string" },
+    originalName: { type: "string" },
+    fileName: { type: "string" },
+    mimeType: { type: "string" },
+    kind: { type: "string", enum: ["IMAGE", "FILE"] },
+    sizeBytes: { type: "integer" },
+    checksumSha256: { type: "string" },
+    width: { anyOf: [{ type: "integer" }, { type: "null" }] },
+    height: { anyOf: [{ type: "integer" }, { type: "null" }] },
+    altText: { anyOf: [{ type: "string" }, { type: "null" }] },
+    title: { anyOf: [{ type: "string" }, { type: "null" }] },
+    metadata: { anyOf: [{ type: "object", additionalProperties: true }, { type: "null" }] },
+    visibility: { type: "string", const: "PUBLIC" },
+    contentUrl: { type: "string" },
+    createdAt: { type: "string", format: "date-time" },
+    updatedAt: { type: "string", format: "date-time" },
+  },
+};
+
+const publicMediaEnvelopeSchema = {
+  type: "object",
+  required: ["asset"],
+  properties: { asset: publicMediaAssetSchema },
 };
 
 const mediaPageSchema = {

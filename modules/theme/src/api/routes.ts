@@ -7,7 +7,7 @@ export interface ThemeDeliveryManifest {
   capabilities: {
     content: true;
     dynamicData: true;
-    publicMedia: false;
+    publicMedia: true;
     catalog: boolean;
     discussions: boolean;
     commerce: boolean;
@@ -17,6 +17,8 @@ export interface ThemeDeliveryManifest {
     contentEntry: "/api/v1/content/:apiId/:slug";
     dynamicData: "/api/v1/data/:schemaKey";
     dynamicRecord: "/api/v1/data/:schemaKey/:id";
+    media: "/api/v1/media/:id";
+    mediaContent: "/api/v1/media/:id/content";
     catalogProducts: "/api/v1/catalog/products" | null;
     catalogProduct: "/api/v1/catalog/products/:slug" | null;
     discussions: "/api/v1/discussions/:sourceType/:sourceId" | null;
@@ -54,7 +56,7 @@ export function buildThemeDeliveryManifest(options: ThemeRouteOptions): ThemeDel
     capabilities: {
       content: true,
       dynamicData: true,
-      publicMedia: false,
+      publicMedia: true,
       catalog,
       discussions,
       commerce,
@@ -64,6 +66,8 @@ export function buildThemeDeliveryManifest(options: ThemeRouteOptions): ThemeDel
       contentEntry: "/api/v1/content/:apiId/:slug",
       dynamicData: "/api/v1/data/:schemaKey",
       dynamicRecord: "/api/v1/data/:schemaKey/:id",
+      media: "/api/v1/media/:id",
+      mediaContent: "/api/v1/media/:id/content",
       catalogProducts: catalog ? "/api/v1/catalog/products" : null,
       catalogProduct: catalog ? "/api/v1/catalog/products/:slug" : null,
       discussions: discussions ? "/api/v1/discussions/:sourceType/:sourceId" : null,
@@ -94,12 +98,14 @@ const manifestJsonSchema = {
     },
     endpoints: {
       type: "object",
-      required: ["content", "contentEntry", "dynamicData", "dynamicRecord", "catalogProducts", "catalogProduct", "discussions", "submitDiscussion"],
+      required: ["content", "contentEntry", "dynamicData", "dynamicRecord", "media", "mediaContent", "catalogProducts", "catalogProduct", "discussions", "submitDiscussion"],
       properties: {
         content: { type: "string", const: "/api/v1/content/:apiId" },
         contentEntry: { type: "string", const: "/api/v1/content/:apiId/:slug" },
         dynamicData: { type: "string", const: "/api/v1/data/:schemaKey" },
         dynamicRecord: { type: "string", const: "/api/v1/data/:schemaKey/:id" },
+        media: { type: "string", const: "/api/v1/media/:id" },
+        mediaContent: { type: "string", const: "/api/v1/media/:id/content" },
         catalogProducts: nullableString("/api/v1/catalog/products"),
         catalogProduct: nullableString("/api/v1/catalog/products/:slug"),
         discussions: nullableString("/api/v1/discussions/:sourceType/:sourceId"),

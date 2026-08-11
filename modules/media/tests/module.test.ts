@@ -52,6 +52,8 @@ describe("MediaModule", () => {
 
       expect(services.has(MEDIA_SERVICE)).toBe(true);
       expect(routes.list().some((route) => route.path === "/api/v1/admin/media")).toBe(true);
+      expect(routes.list().some((route) => route.path === "/api/v1/media/:id/content" && route.public)).toBe(true);
+      expect(routes.list().some((route) => route.path === "/api/v1/admin/media/:id/visibility")).toBe(true);
       expect(permissions.has("media.assets.upload")).toBe(true);
       expect((await health.runAll()).find((check) => check.id === "module.media")?.status).toBe(
         "healthy",

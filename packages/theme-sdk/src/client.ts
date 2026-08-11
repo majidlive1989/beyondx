@@ -10,6 +10,7 @@ import type {
   DiscussionSubmission,
   DiscussionThread,
   DynamicRecord,
+  PublicMediaAsset,
   ThemeDeliveryManifest,
 } from "./types.js";
 
@@ -63,6 +64,12 @@ export class BeyondXThemeClient {
     get: <TValues extends Record<string, unknown> = Record<string, unknown>>(schemaKey: string, id: string) => Promise<DynamicRecord<TValues>>;
   };
 
+  readonly media: {
+    get: (id: string) => Promise<PublicMediaAsset>;
+    url: (assetOrId: string | { id: string }) => string;
+    metadataUrl: (assetOrId: string | { id: string }) => string;
+  };
+
   readonly catalog: {
     listProducts: <TCustomFields extends Record<string, unknown> = Record<string, unknown>>(options?: CatalogListOptions) => Promise<BeyondXPage<CatalogProduct<TCustomFields>>>;
     getProduct: <TCustomFields extends Record<string, unknown> = Record<string, unknown>>(slug: string) => Promise<CatalogProduct<TCustomFields>>;
@@ -100,6 +107,15 @@ export class BeyondXThemeClient {
         const response = await this.get<{ record: DynamicRecord<TValues> }>(`/api/v1/data/${segment(schemaKey)}/${segment(id)}`);
         return response.record;
       },
+    };
+
+    this.media = {
+      get: async (id: string) => {
+        const response = await this.get<{ asset: PublicMediaAsset }>(`/api/v1/media/${segment(id)}`);
+        return response.asset;
+      },
+      url: (assetOrId) => this.absolutePath(`/api/v1/media/${segment(mediaId(assetOrId))}/content`),
+      metadataUrl: (assetOrId) => this.absolutePath(`/api/v1/media/${segment(mediaId(assetOrId))}`),
     };
 
     this.catalog = {
@@ -141,8 +157,12 @@ export class BeyondXThemeClient {
     return payload as T;
   }
 
+  private absolutePath(path: string): string {
+    return `${this.baseUrl}${path}`;
+  }
+
   private url(path: string, query?: Record<string, string>): URL {
-    const url = new URL(`${this.baseUrl}${path}`);
+    const url = new URL(this.absolutePath(path));
     if (query) {
       for (const [key, value] of Object.entries(query)) url.searchParams.set(key, value);
     }
@@ -162,6 +182,10 @@ function normalizeBaseUrl(value: string): string {
 
 function segment(value: string): string {
   return encodeURIComponent(value);
+}
+
+function mediaId(value: string | { id: string }): string {
+  return typeof value === "string" ? value : value.id;
 }
 
 function paginationQuery(options: PaginationOptions): Record<string, string> {

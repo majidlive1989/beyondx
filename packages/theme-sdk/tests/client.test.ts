@@ -22,11 +22,43 @@ describe("BeyondX theme SDK", () => {
       platform: "BeyondX",
       apiVersion: "v1",
       sdkPackage: "@beyondx/theme-sdk",
-      capabilities: { content: true, dynamicData: true, publicMedia: false, catalog: true, discussions: false, commerce: false },
+      capabilities: { content: true, dynamicData: true, publicMedia: true, catalog: true, discussions: false, commerce: false },
       endpoints: {},
     }));
     const manifest = await createBeyondXThemeClient({ baseUrl: "https://api.example.com", fetch: fetcher }).manifest();
     expect(manifest.capabilities.catalog).toBe(true);
+  });
+
+  it("builds public media URLs and reads media metadata", async () => {
+    let requested = "";
+    const fetcher: BeyondXFetch = (input) => {
+      requested = String(input);
+      return Promise.resolve(jsonResponse({
+        asset: {
+          id: "asset 1",
+          originalName: "hero.png",
+          fileName: "hero.png",
+          mimeType: "image/png",
+          kind: "IMAGE",
+          sizeBytes: 24,
+          checksumSha256: "abc",
+          width: 800,
+          height: 600,
+          altText: "Hero",
+          title: null,
+          metadata: null,
+          visibility: "PUBLIC",
+          contentUrl: "/api/v1/media/asset%201/content",
+          createdAt: "2026-08-11T00:00:00.000Z",
+          updatedAt: "2026-08-11T00:00:00.000Z",
+        },
+      }));
+    };
+    const client = createBeyondXThemeClient({ baseUrl: "https://api.example.com/", fetch: fetcher });
+    const asset = await client.media.get("asset 1");
+    expect(requested).toBe("https://api.example.com/api/v1/media/asset%201");
+    expect(client.media.url(asset)).toBe("https://api.example.com/api/v1/media/asset%201/content");
+    expect(client.media.metadataUrl(asset)).toBe("https://api.example.com/api/v1/media/asset%201");
   });
 
   it("normalizes BeyondX error envelopes", async () => {

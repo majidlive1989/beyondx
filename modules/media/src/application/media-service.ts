@@ -11,6 +11,12 @@ import type {
   MediaPage,
   MediaUpdateInput,
 } from "../domain/models.js";
+import {
+  getMediaVisibility,
+  replaceUserMediaMetadata,
+  setMediaVisibilityMetadata,
+  type MediaVisibility,
+} from "../domain/public-delivery.js";
 import { inspectFile } from "../infrastructure/file-inspection.js";
 
 export interface MediaRequestMetadata {
@@ -27,6 +33,7 @@ export interface UploadMediaInput {
   title?: string | null;
   altText?: string | null;
   metadata?: Record<string, unknown> | null;
+  visibility?: MediaVisibility;
 }
 
 export interface MediaContent {
@@ -128,7 +135,10 @@ export class MediaService {
         height: inspection.height,
         altText,
         title,
-        metadata: input.metadata ?? null,
+        metadata: setMediaVisibilityMetadata(
+          input.metadata ?? null,
+          input.visibility ?? "PRIVATE",
+        ),
         uploadedByUserId: request.actorUserId,
       });
       await this.repository.audit({
@@ -171,6 +181,45 @@ export class MediaService {
     return { asset, data };
   }
 
+  async publicGet(id: string): Promise<MediaAsset> {
+    const asset = await this.get(id);
+    if (getMediaVisibility(asset) !== "PUBLIC") {
+      throw new AppError({
+        code: "MEDIA_PUBLIC_ASSET_NOT_FOUND",
+        message: "Public media asset was not found",
+        statusCode: 404,
+      });
+    }
+    return asset;
+  }
+
+  async publicContent(id: string): Promise<MediaContent> {
+    const asset = await this.publicGet(id);
+    const data = await this.storage.read(asset.storageKey);
+    return { asset, data };
+  }
+
+  async setVisibility(
+    id: string,
+    visibility: MediaVisibility,
+    request: MediaRequestMetadata,
+  ): Promise<MediaAsset> {
+    const current = await this.get(id);
+    if (getMediaVisibility(current) === visibility) return current;
+
+    const asset = await this.repository.update(id, {
+      metadata: setMediaVisibilityMetadata(current.metadata, visibility),
+    });
+    await this.repository.audit({
+      actorUserId: request.actorUserId,
+      action: "media.asset.visibility.update",
+      targetId: id,
+      ...auditFields(request),
+      metadata: { visibility },
+    });
+    return asset;
+  }
+
   async update(
     id: string,
     input: MediaUpdateInput,
@@ -184,7 +233,14 @@ export class MediaService {
       ...(input.altText === undefined
         ? {}
         : { altText: normalizeOptionalText(input.altText, 500, "altText") }),
-      ...(input.metadata === undefined ? {} : { metadata: input.metadata }),
+      ...(input.metadata === undefined
+        ? {}
+        : {
+            metadata: replaceUserMediaMetadata(
+              current.metadata,
+              input.metadata,
+            ),
+          }),
     };
 
     if (current.kind !== "IMAGE" && next.altText !== undefined && next.altText !== null) {

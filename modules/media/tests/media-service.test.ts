@@ -5,6 +5,7 @@ import type {
   StorageAdapter,
 } from "../src/application/contracts.js";
 import { MediaService } from "../src/application/media-service.js";
+import { getMediaVisibility } from "../src/domain/public-delivery.js";
 import type {
   MediaAsset,
   MediaListInput,
@@ -118,8 +119,22 @@ describe("MediaService", () => {
       uploadedByUserId: "admin-1",
     });
     expect(storage.files.size).toBe(1);
+    expect(getMediaVisibility(asset)).toBe("PRIVATE");
     expect((await service.content(asset.id)).data.byteLength).toBe(24);
+    await expect(service.publicContent(asset.id)).rejects.toMatchObject({
+      code: "MEDIA_PUBLIC_ASSET_NOT_FOUND",
+      statusCode: 404,
+    });
+
+    const publicAsset = await service.setVisibility(
+      asset.id,
+      "PUBLIC",
+      { actorUserId: "admin-1", requestId: "req-2" },
+    );
+    expect(getMediaVisibility(publicAsset)).toBe("PUBLIC");
+    expect((await service.publicContent(asset.id)).data.byteLength).toBe(24);
     expect(repository.audits).toContain("media.asset.upload");
+    expect(repository.audits).toContain("media.asset.visibility.update");
   });
 
   it("rejects MIME spoofing", async () => {
