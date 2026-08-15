@@ -1,0 +1,1642 @@
+diff --git a/.env.example b/.env.example
+index 36eb539..cbe9f1c 100644
+--- a/.env.example
++++ b/.env.example
+@@ -16,7 +16,6 @@ JWT_REFRESH_EXPIRES_IN=30d
+ PASSWORD_SALT_ROUNDS=12
+ ADMIN_URL=http://localhost:3000
+ NEXT_PUBLIC_API_URL=http://127.0.0.1:4000
+-NEXT_PUBLIC_STOREFRONT_URL=http://localhost:3001
+ EMAIL_VERIFICATION_EXPIRES_IN=24h
+ PASSWORD_RESET_EXPIRES_IN=1h
+ REFRESH_COOKIE_NAME=beyondx_refresh
+@@ -29,7 +28,7 @@ ADMIN_PASSWORD=ChangeMe123!
+ ADMIN_FIRST_NAME=BeyondX
+ ADMIN_LAST_NAME=Admin
+ 
+-CORS_ORIGIN=http://localhost:3000,http://localhost:3001
++CORS_ORIGIN=http://localhost:3000
+ 
+ SMTP_HOST=localhost
+ SMTP_PORT=1025
+diff --git a/PATCH-FILES-5C6.txt b/PATCH-FILES-5C6.txt
+new file mode 100644
+index 0000000..53e86fa
+--- /dev/null
++++ b/PATCH-FILES-5C6.txt
+@@ -0,0 +1,13 @@
++README.md
++.env.example
++turbo.json
++package.json
++PHASE5C6-HEADLESS-INTEGRATION-README.md
++docs/FRONTEND-INTEGRATION-CONTRACT.md
++scripts/verify-headless-boundary.mjs
++scripts/apply-phase5c6-cleanup.mjs
++scripts/apply-phase5c6-cleanup.ps1
++scripts/verify-phase5.mjs
++apps/storefront/ (deleted by cleanup script or Git patch)
++PHASE5C-NEXT-INTEGRATION-README.md (deleted)
++PHASE5C-FIX1-README.md (deleted)
+diff --git a/PHASE5C-FIX1-README.md b/PHASE5C-FIX1-README.md
+deleted file mode 100644
+index 2b8bbaf..0000000
+--- a/PHASE5C-FIX1-README.md
++++ /dev/null
+@@ -1,15 +0,0 @@
+-# Phase 5C Fix 1 — Next.js ESM TypeScript workspace resolution
+-
+-Fixes Next.js/Webpack development resolution for `@beyondx/theme-sdk` source exports such as `./client.js` and `./types.js` when the workspace package is transpiled directly from TypeScript source.
+-
+-## Apply
+-Extract this overlay at the BeyondX repository root and overwrite the existing file.
+-
+-## Verify
+-```bash
+-pnpm --filter @beyondx/storefront typecheck
+-pnpm --filter @beyondx/storefront build
+-pnpm dev
+-```
+-
+-Then open `http://localhost:3001`.
+diff --git a/PHASE5C-NEXT-INTEGRATION-README.md b/PHASE5C-NEXT-INTEGRATION-README.md
+deleted file mode 100644
+index d496b12..0000000
+--- a/PHASE5C-NEXT-INTEGRATION-README.md
++++ /dev/null
+@@ -1,75 +0,0 @@
+-# BeyondX Phase 5C — Next.js Theme Integration
+-
+-Phase 5C turns the Phase 5A/5B delivery contract into a runnable reference frontend. It adds a standalone Next.js App Router storefront that consumes BeyondX only through `@beyondx/theme-sdk` and public delivery APIs.
+-
+-## Delivered
+-
+-- New workspace app: `apps/storefront` on port `3001`.
+-- Next.js 15 App Router reference integration using `@beyondx/theme-sdk`.
+-- Server-rendered home page with live Theme capability discovery.
+-- Product listing with server-side search, brand/category filters and pagination.
+-- Product detail route with public media, variants, custom fields and optional discussions.
+-- Generic CMS routes for any public content type: `/content/:apiId` and `/content/:apiId/:slug`.
+-- Dynamic metadata for product and CMS detail pages.
+-- Stable public media URLs from the Theme SDK; no storage keys leak into the frontend.
+-- 60-second Next fetch revalidation baseline for public delivery reads.
+-- Responsive loading, error and not-found states.
+-- Capability-aware behavior: optional Catalog/Discussion integrations are discovered rather than assumed.
+-- Storefront-specific structural verifier coverage in `verify:phase5`.
+-
+-## Local environment
+-
+-The default local topology is:
+-
+-- Admin: `http://localhost:3000`
+-- Storefront: `http://localhost:3001`
+-- API: `http://127.0.0.1:4000`
+-
+-Environment values:
+-
+-```env
+-NEXT_PUBLIC_API_URL=http://127.0.0.1:4000
+-NEXT_PUBLIC_STOREFRONT_URL=http://localhost:3001
+-CORS_ORIGIN=http://localhost:3000,http://localhost:3001
+-```
+-
+-## Run
+-
+-From repository root:
+-
+-```bash
+-pnpm install
+-pnpm dev
+-```
+-
+-Or run only the reference storefront:
+-
+-```bash
+-pnpm --filter @beyondx/storefront dev
+-```
+-
+-## Verification
+-
+-```bash
+-pnpm lint
+-pnpm typecheck
+-pnpm test
+-pnpm build
+-pnpm verify:phase5
+-```
+-
+-## Manual smoke test
+-
+-1. Run API, Admin and Storefront.
+-2. Open `http://localhost:3001` and confirm the Theme capability card loads.
+-3. With Catalog enabled, confirm active products render on the home page and `/products`.
+-4. Mark a product image PUBLIC in Media Library and confirm it renders in the storefront.
+-5. Mark that same image PRIVATE and confirm the next revalidated storefront response no longer exposes it.
+-6. Open a product detail route and confirm variants/custom fields render from the SDK response.
+-7. Open `/content/<apiId>` for a public CMS type and then an entry detail route.
+-8. View page source/metadata and confirm product/CMS title and description are server generated.
+-9. Stop the API and confirm the Storefront error boundary provides a recoverable error state.
+-
+-## Architectural rule
+-
+-`apps/storefront` must not import Prisma, database repositories, Media storage adapters, Catalog repositories or CMS internals. Its BeyondX integration boundary is `@beyondx/theme-sdk` plus standard Next.js primitives.
+diff --git a/PHASE5C6-HEADLESS-INTEGRATION-README.md b/PHASE5C6-HEADLESS-INTEGRATION-README.md
+new file mode 100644
+index 0000000..6e1495d
+--- /dev/null
++++ b/PHASE5C6-HEADLESS-INTEGRATION-README.md
+@@ -0,0 +1,88 @@
++# BeyondX Phase 5C.6 — Headless Boundary + External Reference Theme
++
++Phase 5C.6 closes Phase 5 by making the frontend boundary explicit.
++
++## Core change
++
++The old `apps/storefront` reference application is removed from the BeyondX repository. BeyondX Core now contains only the API/Admin platform plus reusable packages/modules/plugins.
++
++The frontend integration contract is HTTP-first. `@beyondx/theme-sdk` stays in Core as an optional typed convenience client.
++
++## Why
++
++A BeyondX installation must be able to serve multiple unrelated frontends without changing the backend:
++
++```text
++BeyondX API
++├── Next.js website
++├── Nuxt/Vue website
++├── PHP/Laravel website
++├── mobile application
++└── future commerce storefront
++```
++
++Backend owns data. Frontend owns presentation.
++
++## Repository cleanup
++
++Removed:
++
++- `apps/storefront/`
++- `PHASE5C-NEXT-INTEGRATION-README.md`
++- `PHASE5C-FIX1-README.md`
++- `NEXT_PUBLIC_STOREFRONT_URL` from root environment/turbo config
++- bundled-storefront lockfile importer (removed by the following `pnpm install`)
++
++Kept:
++
++- public REST endpoints
++- Theme Delivery Manifest
++- `@beyondx/theme-sdk`
++- Site Settings
++- Pages + Blog
++- Navigation
++- Public Media Delivery
++- Contact Form
++- SEO delivery
++
++## Apply from overlay ZIP on Windows
++
++Extract the Phase 5C.6 Core ZIP over the repository root, then run:
++
++```bash
++pnpm phase5c6:cleanup
++pnpm install
++```
++
++The cross-platform cleanup script is idempotent. It deletes the old bundled storefront and obsolete storefront-only docs if they still exist.
++
++## Verification
++
++```bash
++pnpm lint
++pnpm typecheck
++pnpm test
++pnpm build
++pnpm verify:phase5
++```
++
++`verify:phase5` now also runs `verify:headless`, which rejects a bundled `apps/storefront` and rejects reintroduction of the removed storefront environment variable.
++
++No Prisma migration and no database seed are required for this checkpoint.
++
++## External reference theme
++
++The separate `BeyondX-Corporate-Starter` package is **not** part of this repository. It is a standalone Next.js application using only the public BeyondX REST API.
++
++It demonstrates:
++
++- Site Settings -> logo/site identity/footer/contact details
++- Navigation -> dynamic Header/Footer links
++- Pages -> generic dynamic page route
++- Blog -> archive + single post
++- Media -> public MediaAsset URLs
++- Contact -> public form submission into Admin Inbox
++- SEO -> metadata/canonical/Open Graph
++- SEO delivery -> `robots.txt` + `sitemap.xml`
++
++The starter exists to prove the public contract, not to make Next.js a BeyondX requirement.
+diff --git a/README.md b/README.md
+index 81addce..d634d70 100644
+--- a/README.md
++++ b/README.md
+@@ -1,13 +1,57 @@
+-# BeyondX — Phase 5C Next.js Theme Integration
++# BeyondX — Headless Platform Core
+ 
+-BeyondX is a modular digital product platform. The current checkpoint includes the Theme Delivery Bridge, typed Theme SDK, explicit public/private Media Delivery and a runnable Next.js reference storefront.
++BeyondX is a modular, API-first backend and Admin platform. The core repository deliberately does **not** bundle a website or storefront.
+ 
+-## Phase 5 delivery checkpoints
++## Architecture boundary
+ 
+-- **5A** — Theme Delivery Bridge + typed `@beyondx/theme-sdk`
+-- **5B** — Public/Private Media Delivery
+-- **5C** — Next.js App Router reference integration
++```text
++BeyondX Admin -> BeyondX API -> Public REST contract -> Any frontend
++```
+ 
+-The reference frontend lives in `apps/storefront` and runs on `http://localhost:3001` during local development. It intentionally consumes BeyondX through the public Theme SDK instead of importing backend/database internals.
++BeyondX owns data, validation, permissions, publishing and delivery contracts. Frontends own layout, components, styling, rendering and framework-specific behavior.
+ 
+-See `PHASE5C-NEXT-INTEGRATION-README.md` for setup, verification and smoke-test instructions.
++A frontend may use Next.js, Nuxt/Vue, React, PHP/Laravel, mobile clients or any other stack that can call HTTP APIs. `@beyondx/theme-sdk` is an optional typed JavaScript convenience layer; the public REST API remains the canonical integration boundary.
++
++## Core applications
++
++- `apps/api` — BeyondX API
++- `apps/admin` — BeyondX Admin
++- `modules/*` — feature modules
++- `plugins/*` — optional runtime plugins
++- `packages/theme-sdk` — optional typed client for JavaScript/TypeScript frontends
++
++There is intentionally no `apps/storefront` in this repository.
++
++## Public website contract
++
++The corporate delivery contract currently includes:
++
++- `GET /api/v1/theme/manifest`
++- `GET /api/v1/site/settings`
++- `GET /api/v1/navigation`
++- `GET /api/v1/pages`
++- `GET /api/v1/pages/:slug`
++- `GET /api/v1/blog/posts`
++- `GET /api/v1/blog/posts/:slug`
++- `GET /api/v1/blog/categories`
++- `GET /api/v1/blog/tags`
++- `GET /api/v1/media/:id`
++- `GET /api/v1/media/:id/content`
++- `POST /api/v1/forms/contact`
++- `GET /api/v1/seo/config`
++- `GET /api/v1/seo/sitemap`
++
++See `docs/FRONTEND-INTEGRATION-CONTRACT.md` for the framework-independent contract and `PHASE5C6-HEADLESS-INTEGRATION-README.md` for this checkpoint.
++
++## Verification
++
++```bash
++pnpm install
++pnpm lint
++pnpm typecheck
++pnpm test
++pnpm build
++pnpm verify:phase5
++```
++
++`pnpm verify:phase5` includes a headless-boundary check that fails if a bundled `apps/storefront` is reintroduced.
+diff --git a/apps/storefront/app/content/[apiId]/[slug]/page.tsx b/apps/storefront/app/content/[apiId]/[slug]/page.tsx
+deleted file mode 100644
+index bbb5fb1..0000000
+--- a/apps/storefront/app/content/[apiId]/[slug]/page.tsx
++++ /dev/null
+@@ -1,70 +0,0 @@
+-import type { Metadata } from "next";
+-import { notFound } from "next/navigation";
+-import { BeyondXApiError, type ContentEntry } from "@beyondx/theme-sdk";
+-import { DataGrid } from "@/components/data-grid";
+-import { beyondx } from "@/lib/beyondx";
+-import { contentMetadata, readableTitle } from "@/lib/seo";
+-
+-export const revalidate = 60;
+-
+-interface ContentEntryPageProps {
+-  params: Promise<{ apiId: string; slug: string }>;
+-  searchParams: Promise<Record<string, string | string[] | undefined>>;
+-}
+-
+-export async function generateMetadata({ params, searchParams }: ContentEntryPageProps): Promise<Metadata> {
+-  const { apiId, slug } = await params;
+-  const query = await searchParams;
+-  const locale = first(query.locale) || "en";
+-  try {
+-    return contentMetadata(await beyondx.content.get(apiId, slug, locale));
+-  } catch (error) {
+-    if (error instanceof BeyondXApiError && error.status === 404) return { title: "Content not found" };
+-    throw error;
+-  }
+-}
+-
+-export default async function ContentEntryPage({ params, searchParams }: ContentEntryPageProps) {
+-  const { apiId, slug } = await params;
+-  const query = await searchParams;
+-  const locale = first(query.locale) || "en";
+-  let entry: ContentEntry;
+-  try {
+-    entry = await beyondx.content.get(apiId, slug, locale);
+-  } catch (error) {
+-    if (error instanceof BeyondXApiError && error.status === 404) notFound();
+-    throw error;
+-  }
+-
+-  const manifest = await beyondx.manifest();
+-  const discussion = manifest.capabilities.discussions
+-    ? await beyondx.discussions.list("CONTENT", entry.id, { page: 1, pageSize: 10 })
+-    : null;
+-
+-  return (
+-    <article className="content-entry page-section">
+-      <header>
+-        <span className="eyebrow">{entry.contentTypeApiId} · {entry.locale}</span>
+-        <h1>{readableTitle(entry)}</h1>
+-        {entry.seoDescription ? <p className="lead">{entry.seoDescription}</p> : null}
+-        <div className="entry-meta"><span>Published {formatDate(entry.publishedAt)}</span><span>Updated {formatDate(entry.updatedAt)}</span></div>
+-      </header>
+-      <section className="section-block"><div className="section-heading"><div><span className="eyebrow">Schema-driven payload</span><h2>Public fields</h2></div></div><DataGrid data={entry.data} /></section>
+-      {discussion ? (
+-        <section className="section-block">
+-          <div className="section-heading"><div><span className="eyebrow">Discussion plugin</span><h2>Comments</h2></div></div>
+-          {discussion.items.length ? <div className="discussion-list">{discussion.items.map((item) => <article key={item.id}><div><strong>{item.authorName}</strong><span>{item.kind}</span></div><p>{item.body}</p></article>)}</div> : <p className="muted">No public comments yet.</p>}
+-        </section>
+-      ) : null}
+-    </article>
+-  );
+-}
+-
+-function first(value: string | string[] | undefined): string {
+-  return Array.isArray(value) ? value[0] ?? "" : value ?? "";
+-}
+-
+-function formatDate(value: string | null): string {
+-  if (!value) return "—";
+-  return new Intl.DateTimeFormat("en", { dateStyle: "medium" }).format(new Date(value));
+-}
+diff --git a/apps/storefront/app/content/[apiId]/page.tsx b/apps/storefront/app/content/[apiId]/page.tsx
+deleted file mode 100644
+index 5163c52..0000000
+--- a/apps/storefront/app/content/[apiId]/page.tsx
++++ /dev/null
+@@ -1,59 +0,0 @@
+-import Link from "next/link";
+-import { BeyondXApiError } from "@beyondx/theme-sdk";
+-import { beyondx } from "@/lib/beyondx";
+-import { readableTitle } from "@/lib/seo";
+-
+-export const revalidate = 60;
+-
+-interface ContentListPageProps {
+-  params: Promise<{ apiId: string }>;
+-  searchParams: Promise<Record<string, string | string[] | undefined>>;
+-}
+-
+-export default async function ContentListPage({ params, searchParams }: ContentListPageProps) {
+-  const { apiId } = await params;
+-  const query = await searchParams;
+-  const locale = first(query.locale) || "en";
+-  const page = positiveInt(first(query.page), 1);
+-
+-  try {
+-    const result = await beyondx.content.list(apiId, { locale, page, pageSize: 12 });
+-    return (
+-      <section className="section-block page-section">
+-        <div className="section-heading">
+-          <div><span className="eyebrow">CMS public delivery</span><h1>{apiId}</h1><p>{result.total} published entr{result.total === 1 ? "y" : "ies"} · locale {locale}</p></div>
+-        </div>
+-        <form className="locale-form" action={`/content/${encodeURIComponent(apiId)}`} method="get">
+-          <label>Locale <input name="locale" defaultValue={locale} /></label>
+-          <button className="secondary" type="submit">Load locale</button>
+-        </form>
+-        {result.items.length ? (
+-          <div className="content-list">
+-            {result.items.map((entry) => (
+-              <article key={entry.id}>
+-                <span>{entry.locale} · {entry.status}</span>
+-                <h2><Link href={`/content/${encodeURIComponent(apiId)}/${encodeURIComponent(entry.slug)}?locale=${encodeURIComponent(locale)}`}>{readableTitle(entry)}</Link></h2>
+-                <p>{entry.seoDescription || `Published ${entry.publishedAt ? new Date(entry.publishedAt).toLocaleDateString("en-US") : "entry"}`}</p>
+-                <Link className="text-link" href={`/content/${encodeURIComponent(apiId)}/${encodeURIComponent(entry.slug)}?locale=${encodeURIComponent(locale)}`}>Read entry →</Link>
+-              </article>
+-            ))}
+-          </div>
+-        ) : <div className="empty-state"><h2>No published content</h2><p>Publish an entry for this content type and locale in BeyondX Admin.</p></div>}
+-      </section>
+-    );
+-  } catch (error) {
+-    if (error instanceof BeyondXApiError && error.status === 404) {
+-      return <section className="empty-state page-section"><h1>Content type not found</h1><p>No public content API exists for <code>{apiId}</code>.</p></section>;
+-    }
+-    throw error;
+-  }
+-}
+-
+-function first(value: string | string[] | undefined): string {
+-  return Array.isArray(value) ? value[0] ?? "" : value ?? "";
+-}
+-
+-function positiveInt(value: string, fallback: number): number {
+-  const parsed = Number.parseInt(value, 10);
+-  return Number.isInteger(parsed) && parsed > 0 ? parsed : fallback;
+-}
+diff --git a/apps/storefront/app/error.tsx b/apps/storefront/app/error.tsx
+deleted file mode 100644
+index ebc9aff..0000000
+--- a/apps/storefront/app/error.tsx
++++ /dev/null
+@@ -1,18 +0,0 @@
+-"use client";
+-
+-import { useEffect } from "react";
+-
+-export default function ErrorBoundary({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
+-  useEffect(() => {
+-    console.error(error);
+-  }, [error]);
+-
+-  return (
+-    <section className="empty-state page-section">
+-      <span className="eyebrow">Delivery error</span>
+-      <h1>BeyondX could not serve this view.</h1>
+-      <p>Confirm the API is running on the configured NEXT_PUBLIC_API_URL and that the required capability/plugin is active.</p>
+-      <button className="primary" type="button" onClick={reset}>Try again</button>
+-    </section>
+-  );
+-}
+diff --git a/apps/storefront/app/globals.css b/apps/storefront/app/globals.css
+deleted file mode 100644
+index 0ade0c2..0000000
+--- a/apps/storefront/app/globals.css
++++ /dev/null
+@@ -1,157 +0,0 @@
+-:root {
+-  color-scheme: dark;
+-  --bg: #07111f;
+-  --panel: #0c1828;
+-  --panel-2: #111f31;
+-  --line: #21324a;
+-  --text: #edf5ff;
+-  --muted: #91a4bb;
+-  --accent: #7ce3ff;
+-  --accent-2: #9af3c4;
+-  --danger: #ff8b9a;
+-}
+-
+-* { box-sizing: border-box; }
+-html { background: var(--bg); }
+-body {
+-  margin: 0;
+-  background:
+-    radial-gradient(circle at 10% 5%, rgba(61, 177, 255, 0.12), transparent 34rem),
+-    radial-gradient(circle at 90% 10%, rgba(101, 255, 194, 0.09), transparent 32rem),
+-    var(--bg);
+-  color: var(--text);
+-  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+-}
+-a { color: inherit; text-decoration: none; }
+-button, input, select { font: inherit; }
+-button, input, select { color: inherit; }
+-code, pre { font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace; }
+-img { display: block; max-width: 100%; }
+-
+-.page-shell { width: min(1240px, calc(100% - 32px)); margin: 0 auto; min-height: 100vh; display: flex; flex-direction: column; }
+-.site-header { min-height: 82px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid rgba(145, 164, 187, 0.18); gap: 24px; }
+-.site-header nav { display: flex; gap: 24px; color: var(--muted); font-size: 14px; }
+-.site-header nav a:hover { color: var(--text); }
+-.brand { display: inline-flex; align-items: center; gap: 11px; }
+-.brand-mark { width: 38px; height: 38px; display: grid; place-items: center; border: 1px solid rgba(124, 227, 255, 0.45); border-radius: 12px; background: linear-gradient(135deg, rgba(124,227,255,.18), rgba(154,243,196,.08)); color: var(--accent); font-size: 12px; font-weight: 800; letter-spacing: .08em; }
+-.brand strong, .brand small { display: block; }
+-.brand strong { font-size: 15px; }
+-.brand small { margin-top: 2px; color: var(--muted); font-size: 11px; }
+-main { flex: 1; }
+-footer { min-height: 86px; display: flex; justify-content: space-between; align-items: center; gap: 20px; border-top: 1px solid rgba(145, 164, 187, 0.18); color: var(--muted); font-size: 12px; }
+-
+-.hero { min-height: 570px; display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(280px, .7fr); align-items: center; gap: 70px; padding: 64px 0; }
+-.hero h1, .page-section h1 { margin: 12px 0 18px; font-size: clamp(44px, 7vw, 86px); line-height: .96; letter-spacing: -.055em; }
+-.hero p { max-width: 760px; color: #b8c7d8; font-size: clamp(17px, 2vw, 21px); line-height: 1.7; }
+-.hero code { display: inline-block; margin: 0 4px; color: var(--accent); font-size: .88em; }
+-.eyebrow { color: var(--accent); font-size: 11px; font-weight: 800; letter-spacing: .15em; text-transform: uppercase; }
+-.hero-actions { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 28px; }
+-.primary, .secondary { min-height: 44px; padding: 0 18px; border-radius: 12px; border: 1px solid transparent; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; font-weight: 700; }
+-.primary { background: var(--accent); color: #04111c; }
+-.secondary { background: transparent; border-color: var(--line); color: var(--text); }
+-.primary:hover, .secondary:hover { transform: translateY(-1px); }
+-.capability-card { border: 1px solid var(--line); background: rgba(12, 24, 40, .78); border-radius: 22px; padding: 24px; box-shadow: 0 24px 80px rgba(0,0,0,.25); }
+-.capability-card > strong { display: block; margin-bottom: 16px; }
+-.capability-card ul { margin: 0; padding: 0; list-style: none; }
+-.capability-card li { display: flex; justify-content: space-between; gap: 16px; padding: 12px 0; border-top: 1px solid rgba(145,164,187,.12); color: var(--muted); }
+-.capability-card b { font-size: 11px; color: var(--danger); text-transform: uppercase; }
+-.capability-card b[data-enabled="true"] { color: var(--accent-2); }
+-
+-.section-block { padding: 54px 0 74px; }
+-.page-section { padding-top: 64px; }
+-.section-heading { display: flex; justify-content: space-between; align-items: end; gap: 24px; margin-bottom: 26px; }
+-.section-heading h1, .section-heading h2 { margin: 6px 0 0; letter-spacing: -.035em; }
+-.section-heading h1 { font-size: clamp(42px, 6vw, 70px); }
+-.section-heading h2 { font-size: clamp(28px, 4vw, 42px); }
+-.section-heading p, .section-heading > span { color: var(--muted); }
+-.product-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; }
+-.product-card { min-width: 0; border: 1px solid var(--line); background: rgba(12,24,40,.62); border-radius: 18px; overflow: hidden; }
+-.product-media { aspect-ratio: 1 / .8; display: grid; place-items: center; background: linear-gradient(145deg, #132138, #09131f); overflow: hidden; }
+-.product-media img { width: 100%; height: 100%; object-fit: cover; transition: transform .35s ease; }
+-.product-card:hover .product-media img { transform: scale(1.025); }
+-.media-placeholder { color: var(--muted); font-size: 13px; }
+-.product-card-body { padding: 20px; }
+-.product-meta-row { display: flex; justify-content: space-between; gap: 16px; color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .08em; }
+-.product-card h2 { margin: 12px 0 8px; font-size: 22px; }
+-.product-card p { margin: 0 0 18px; color: var(--muted); line-height: 1.6; min-height: 3.2em; }
+-.text-link { color: var(--accent); font-size: 13px; font-weight: 700; }
+-
+-.integration-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; padding: 12px 0 84px; }
+-.integration-grid article { border-top: 1px solid var(--line); padding: 20px 0; }
+-.integration-grid span { color: var(--accent); font-size: 11px; }
+-.integration-grid h3 { margin: 20px 0 8px; }
+-.integration-grid p { margin: 0; color: var(--muted); line-height: 1.7; }
+-.empty-state, .loading-state { margin: 60px 0; padding: 40px; border: 1px dashed var(--line); border-radius: 18px; background: rgba(12,24,40,.44); }
+-.empty-state h1, .empty-state h2, .empty-state h3 { margin: 8px 0 10px; }
+-.empty-state p, .loading-state p, .muted { color: var(--muted); }
+-.loading-state { display: flex; align-items: center; gap: 16px; }
+-.loading-state p { margin: 5px 0 0; }
+-.loading-dot { width: 12px; height: 12px; border-radius: 999px; background: var(--accent); box-shadow: 0 0 24px var(--accent); }
+-
+-.filters { display: grid; grid-template-columns: 1.4fr 1fr 1fr auto; align-items: end; gap: 12px; margin-bottom: 24px; }
+-.filters label, .locale-form label { display: grid; gap: 7px; color: var(--muted); font-size: 12px; }
+-.filters input, .filters select, .locale-form input { height: 44px; width: 100%; padding: 0 12px; border: 1px solid var(--line); border-radius: 11px; background: var(--panel); outline: none; }
+-.filters input:focus, .filters select:focus, .locale-form input:focus { border-color: var(--accent); }
+-.pagination { display: grid; grid-template-columns: 1fr auto 1fr; gap: 18px; align-items: center; padding-top: 28px; color: var(--muted); }
+-.pagination a:last-child { text-align: right; }
+-
+-.product-detail { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, .95fr); gap: 48px; padding: 68px 0 34px; align-items: start; }
+-.product-detail-media { aspect-ratio: 1 / .88; display: grid; place-items: center; overflow: hidden; background: var(--panel); border: 1px solid var(--line); border-radius: 22px; }
+-.product-detail-media img { width: 100%; height: 100%; object-fit: cover; }
+-.product-detail-copy { padding: 26px 0; }
+-.product-detail-copy h1 { margin: 10px 0 14px; font-size: clamp(46px, 6vw, 76px); line-height: 1; letter-spacing: -.05em; }
+-.lead { color: #bac9d9; font-size: 18px; line-height: 1.75; }
+-.chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 22px 0; }
+-.chips span { padding: 7px 10px; border: 1px solid var(--line); border-radius: 999px; color: var(--muted); font-size: 11px; }
+-.detail-panel { margin-top: 26px; padding: 18px; border: 1px solid var(--line); border-radius: 16px; background: rgba(12,24,40,.58); }
+-.variant-list { list-style: none; padding: 0; margin: 12px 0 0; }
+-.variant-list li { display: flex; justify-content: space-between; gap: 20px; padding: 11px 0; border-top: 1px solid rgba(145,164,187,.14); }
+-.variant-list code { color: var(--accent); font-size: 12px; }
+-.custom-fields { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 12px; }
+-.custom-fields > div { padding: 16px; border: 1px solid var(--line); border-radius: 14px; background: var(--panel); min-width: 0; }
+-.custom-fields pre { white-space: pre-wrap; word-break: break-word; color: var(--muted); }
+-.discussion-list { display: grid; gap: 12px; }
+-.discussion-list article { padding: 18px; border: 1px solid var(--line); border-radius: 14px; background: var(--panel); }
+-.discussion-list article > div { display: flex; justify-content: space-between; gap: 16px; color: var(--muted); font-size: 12px; }
+-.discussion-list p { margin: 12px 0 0; line-height: 1.7; }
+-
+-.locale-form { display: flex; align-items: end; gap: 10px; margin-bottom: 26px; }
+-.locale-form label { min-width: 240px; }
+-.content-list { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 14px; }
+-.content-list article { padding: 22px; border: 1px solid var(--line); border-radius: 16px; background: rgba(12,24,40,.62); }
+-.content-list article > span { color: var(--accent); font-size: 11px; text-transform: uppercase; }
+-.content-list h2 { margin: 10px 0; font-size: 25px; }
+-.content-list p { color: var(--muted); line-height: 1.65; }
+-.content-entry > header { max-width: 900px; padding: 24px 0 34px; }
+-.content-entry > header h1 { max-width: 900px; }
+-.entry-meta { display: flex; gap: 18px; flex-wrap: wrap; color: var(--muted); font-size: 12px; }
+-.data-grid { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 12px; margin: 0; }
+-.data-grid > div { min-width: 0; padding: 16px; border: 1px solid var(--line); border-radius: 14px; background: var(--panel); }
+-.data-grid dt { color: var(--accent); font-size: 11px; text-transform: uppercase; letter-spacing: .08em; }
+-.data-grid dd { margin: 10px 0 0; }
+-.data-grid pre { margin: 0; white-space: pre-wrap; word-break: break-word; color: #c8d4e2; line-height: 1.6; }
+-
+-@media (max-width: 960px) {
+-  .hero, .product-detail { grid-template-columns: 1fr; gap: 28px; }
+-  .hero { min-height: auto; }
+-  .product-grid, .integration-grid { grid-template-columns: repeat(2, minmax(0,1fr)); }
+-  .filters { grid-template-columns: 1fr 1fr; }
+-  .custom-fields { grid-template-columns: repeat(2, minmax(0,1fr)); }
+-}
+-
+-@media (max-width: 640px) {
+-  .page-shell { width: min(100% - 22px, 1240px); }
+-  .site-header { min-height: 72px; }
+-  .site-header nav { gap: 14px; }
+-  .brand small { display: none; }
+-  .hero { padding: 54px 0; }
+-  .hero h1, .page-section h1 { font-size: 44px; }
+-  .product-grid, .integration-grid, .content-list, .data-grid, .custom-fields { grid-template-columns: 1fr; }
+-  .filters { grid-template-columns: 1fr; }
+-  .section-heading { align-items: start; flex-direction: column; }
+-  .product-detail { padding-top: 44px; }
+-  .product-detail-copy h1 { font-size: 46px; }
+-  .locale-form { align-items: stretch; flex-direction: column; }
+-  .locale-form label { min-width: 0; }
+-  footer { align-items: flex-start; flex-direction: column; justify-content: center; }
+-}
+diff --git a/apps/storefront/app/layout.tsx b/apps/storefront/app/layout.tsx
+deleted file mode 100644
+index 92eb71c..0000000
+--- a/apps/storefront/app/layout.tsx
++++ /dev/null
+@@ -1,31 +0,0 @@
+-import type { Metadata } from "next";
+-import type { ReactNode } from "react";
+-import { SiteHeader } from "@/components/site-header";
+-import { siteUrl } from "@/lib/seo";
+-import "./globals.css";
+-
+-export const metadata: Metadata = {
+-  metadataBase: new URL(siteUrl()),
+-  title: {
+-    default: "BeyondX Storefront",
+-    template: "%s · BeyondX",
+-  },
+-  description: "Reference Next.js storefront powered by the BeyondX Theme SDK.",
+-};
+-
+-export default function RootLayout({ children }: { children: ReactNode }) {
+-  return (
+-    <html lang="en">
+-      <body>
+-        <div className="page-shell">
+-          <SiteHeader />
+-          <main>{children}</main>
+-          <footer>
+-            <span>BeyondX Phase 5C</span>
+-            <span>Next.js + @beyondx/theme-sdk</span>
+-          </footer>
+-        </div>
+-      </body>
+-    </html>
+-  );
+-}
+diff --git a/apps/storefront/app/loading.tsx b/apps/storefront/app/loading.tsx
+deleted file mode 100644
+index 29a1666..0000000
+--- a/apps/storefront/app/loading.tsx
++++ /dev/null
+@@ -1,8 +0,0 @@
+-export default function Loading() {
+-  return (
+-    <section className="loading-state" aria-live="polite">
+-      <span className="loading-dot" />
+-      <div><strong>Loading BeyondX data</strong><p>Fetching the public delivery contract…</p></div>
+-    </section>
+-  );
+-}
+diff --git a/apps/storefront/app/not-found.tsx b/apps/storefront/app/not-found.tsx
+deleted file mode 100644
+index 01e076e..0000000
+--- a/apps/storefront/app/not-found.tsx
++++ /dev/null
+@@ -1,12 +0,0 @@
+-import Link from "next/link";
+-
+-export default function NotFound() {
+-  return (
+-    <section className="empty-state page-section">
+-      <span className="eyebrow">404</span>
+-      <h1>That public resource was not found.</h1>
+-      <p>It may be unpublished, private, archived or the URL may be incorrect.</p>
+-      <Link className="primary" href="/">Return home</Link>
+-    </section>
+-  );
+-}
+diff --git a/apps/storefront/app/page.tsx b/apps/storefront/app/page.tsx
+deleted file mode 100644
+index 96b2cac..0000000
+--- a/apps/storefront/app/page.tsx
++++ /dev/null
+@@ -1,61 +0,0 @@
+-import Link from "next/link";
+-import { ProductCard } from "@/components/product-card";
+-import { beyondx } from "@/lib/beyondx";
+-
+-export const revalidate = 60;
+-
+-export default async function HomePage() {
+-  const manifest = await beyondx.manifest();
+-  const products = manifest.capabilities.catalog
+-    ? await beyondx.catalog.listProducts({ page: 1, pageSize: 6 })
+-    : null;
+-
+-  return (
+-    <>
+-      <section className="hero">
+-        <div>
+-          <span className="eyebrow">Phase 5C · Next.js Theme Integration</span>
+-          <h1>A real frontend, powered by BeyondX.</h1>
+-          <p>
+-            This reference storefront consumes public content, catalog and media through the typed
+-            <code>@beyondx/theme-sdk</code> contract instead of coupling the frontend to database or storage internals.
+-          </p>
+-          <div className="hero-actions">
+-            {manifest.capabilities.catalog ? <Link className="primary" href="/products">Browse products</Link> : null}
+-            <Link className="secondary" href="/content/pages">Open CMS content</Link>
+-          </div>
+-        </div>
+-        <aside className="capability-card">
+-          <strong>Live capability manifest</strong>
+-          <ul>
+-            {Object.entries(manifest.capabilities).map(([name, enabled]) => (
+-              <li key={name}><span>{name}</span><b data-enabled={enabled}>{enabled ? "ready" : "off"}</b></li>
+-            ))}
+-          </ul>
+-        </aside>
+-      </section>
+-
+-      {products ? (
+-        <section className="section-block">
+-          <div className="section-heading">
+-            <div><span className="eyebrow">Catalog</span><h2>Public products</h2></div>
+-            <Link className="text-link" href="/products">View all →</Link>
+-          </div>
+-          {products.items.length > 0 ? (
+-            <div className="product-grid">{products.items.map((product) => <ProductCard key={product.id} product={product} />)}</div>
+-          ) : (
+-            <div className="empty-state"><h3>No active products yet</h3><p>Publish a Catalog product in Admin and it will render here on the next revalidation.</p></div>
+-          )}
+-        </section>
+-      ) : (
+-        <section className="empty-state"><h2>Catalog plugin is disabled</h2><p>The storefront discovered this from the Theme manifest and did not call Catalog APIs.</p></section>
+-      )}
+-
+-      <section className="integration-grid">
+-        <article><span>01</span><h3>Server rendered</h3><p>App Router server components fetch through the SDK and render meaningful HTML on the server.</p></article>
+-        <article><span>02</span><h3>Revalidated</h3><p>Public API reads are cached for 60 seconds, giving the reference theme a production-friendly baseline.</p></article>
+-        <article><span>03</span><h3>Storage agnostic</h3><p>Images use stable public media endpoints; the frontend never sees local or S3 storage keys.</p></article>
+-      </section>
+-    </>
+-  );
+-}
+diff --git a/apps/storefront/app/products/[slug]/page.tsx b/apps/storefront/app/products/[slug]/page.tsx
+deleted file mode 100644
+index 153c7ef..0000000
+--- a/apps/storefront/app/products/[slug]/page.tsx
++++ /dev/null
+@@ -1,80 +0,0 @@
+-import type { Metadata } from "next";
+-import { notFound } from "next/navigation";
+-import { BeyondXApiError, type CatalogProduct } from "@beyondx/theme-sdk";
+-import { beyondx, mediaUrl } from "@/lib/beyondx";
+-import { productMetadata } from "@/lib/seo";
+-
+-export const revalidate = 60;
+-
+-interface ProductPageProps {
+-  params: Promise<{ slug: string }>;
+-}
+-
+-export async function generateMetadata({ params }: ProductPageProps): Promise<Metadata> {
+-  const { slug } = await params;
+-  try {
+-    return productMetadata(await beyondx.catalog.getProduct(slug));
+-  } catch (error) {
+-    if (error instanceof BeyondXApiError && error.status === 404) return { title: "Product not found" };
+-    throw error;
+-  }
+-}
+-
+-export default async function ProductPage({ params }: ProductPageProps) {
+-  const { slug } = await params;
+-  let product: CatalogProduct;
+-  try {
+-    product = await beyondx.catalog.getProduct(slug);
+-  } catch (error) {
+-    if (error instanceof BeyondXApiError && error.status === 404) notFound();
+-    throw error;
+-  }
+-
+-  const manifest = await beyondx.manifest();
+-  const discussion = manifest.capabilities.discussions
+-    ? await beyondx.discussions.list("PRODUCT", product.id, { page: 1, pageSize: 10 })
+-    : null;
+-  const primaryMedia = product.media[0];
+-
+-  return (
+-    <>
+-      <section className="product-detail">
+-        <div className="product-detail-media">
+-          {primaryMedia ? <img src={mediaUrl(primaryMedia.id)} alt={primaryMedia.altText || product.name} /> : <span className="media-placeholder">No public media</span>}
+-        </div>
+-        <div className="product-detail-copy">
+-          <span className="eyebrow">{product.brand?.name || "Catalog product"}</span>
+-          <h1>{product.name}</h1>
+-          <p className="lead">{product.description || "No product description has been published yet."}</p>
+-          {product.categories.length ? <div className="chips">{product.categories.map((category) => <span key={category.id}>{category.name}</span>)}</div> : null}
+-          <div className="detail-panel">
+-            <strong>Variants</strong>
+-            {product.variants.length ? (
+-              <ul className="variant-list">
+-                {product.variants.map((variant) => (
+-                  <li key={variant.id}><span>{variant.title}</span><code>{variant.sku}</code></li>
+-                ))}
+-              </ul>
+-            ) : <p className="muted">No active variants.</p>}
+-          </div>
+-        </div>
+-      </section>
+-
+-      {Object.keys(product.customFields).length ? (
+-        <section className="section-block"><div className="section-heading"><div><span className="eyebrow">Schema extensions</span><h2>Custom fields</h2></div></div><div className="custom-fields">{Object.entries(product.customFields).map(([key, value]) => <div key={key}><strong>{key}</strong><pre>{format(value)}</pre></div>)}</div></section>
+-      ) : null}
+-
+-      {discussion ? (
+-        <section className="section-block">
+-          <div className="section-heading"><div><span className="eyebrow">Discussion plugin</span><h2>Reviews & comments</h2></div>{discussion.rating ? <span>{discussion.rating.average ?? "—"} / 5 · {discussion.rating.count} ratings</span> : null}</div>
+-          {discussion.items.length ? <div className="discussion-list">{discussion.items.map((item) => <article key={item.id}><div><strong>{item.authorName}</strong><span>{item.kind}{item.rating ? ` · ${item.rating}/5` : ""}</span></div><p>{item.body}</p></article>)}</div> : <p className="muted">No public discussion entries yet.</p>}
+-        </section>
+-      ) : null}
+-    </>
+-  );
+-}
+-
+-function format(value: unknown): string {
+-  if (typeof value === "string") return value;
+-  return JSON.stringify(value, null, 2) ?? "—";
+-}
+diff --git a/apps/storefront/app/products/page.tsx b/apps/storefront/app/products/page.tsx
+deleted file mode 100644
+index 1f63d55..0000000
+--- a/apps/storefront/app/products/page.tsx
++++ /dev/null
+@@ -1,96 +0,0 @@
+-import { ProductCard } from "@/components/product-card";
+-import { beyondx } from "@/lib/beyondx";
+-
+-export const revalidate = 60;
+-
+-interface ProductsPageProps {
+-  searchParams: Promise<Record<string, string | string[] | undefined>>;
+-}
+-
+-export default async function ProductsPage({ searchParams }: ProductsPageProps) {
+-  const query = await searchParams;
+-  const search = first(query.search);
+-  const brand = first(query.brand);
+-  const category = first(query.category);
+-  const page = positiveInt(first(query.page), 1);
+-  const manifest = await beyondx.manifest();
+-
+-  if (!manifest.capabilities.catalog) {
+-    return <section className="empty-state"><h1>Catalog is unavailable</h1><p>Enable the Catalog plugin to use this reference route.</p></section>;
+-  }
+-
+-  const [brands, categories, products] = await Promise.all([
+-    beyondx.catalog.listBrands(),
+-    beyondx.catalog.listCategories(),
+-    beyondx.catalog.listProducts({
+-    page,
+-    pageSize: 12,
+-    ...(search ? { search } : {}),
+-    ...(brand ? { brand } : {}),
+-      ...(category ? { category } : {}),
+-    }),
+-  ]);
+-
+-  return (
+-    <section className="section-block page-section">
+-      <div className="section-heading products-heading">
+-        <div><span className="eyebrow">Catalog · SSR filters</span><h1>Products</h1><p>{products.total} public product{products.total === 1 ? "" : "s"}</p></div>
+-      </div>
+-
+-      <form className="filters" action="/products" method="get">
+-        <label>
+-          Search
+-          <input name="search" defaultValue={search} placeholder="Product name" />
+-        </label>
+-        <label>
+-          Brand
+-          <select name="brand" defaultValue={brand}>
+-            <option value="">All brands</option>
+-            {brands.map((item) => <option key={item.id} value={item.slug}>{item.name}</option>)}
+-          </select>
+-        </label>
+-        <label>
+-          Category
+-          <select name="category" defaultValue={category}>
+-            <option value="">All categories</option>
+-            {categories.map((item) => <option key={item.id} value={item.slug}>{item.name}</option>)}
+-          </select>
+-        </label>
+-        <button className="primary" type="submit">Apply filters</button>
+-      </form>
+-
+-      {products.items.length ? (
+-        <div className="product-grid">{products.items.map((product) => <ProductCard key={product.id} product={product} />)}</div>
+-      ) : (
+-        <div className="empty-state"><h2>No products match</h2><p>Try a broader search or remove a filter.</p></div>
+-      )}
+-
+-      {products.pageCount > 1 ? (
+-        <nav className="pagination" aria-label="Product pages">
+-          {products.page > 1 ? <a href={pageHref(query, products.page - 1)}>← Previous</a> : <span />}
+-          <span>Page {products.page} of {products.pageCount}</span>
+-          {products.page < products.pageCount ? <a href={pageHref(query, products.page + 1)}>Next →</a> : <span />}
+-        </nav>
+-      ) : null}
+-    </section>
+-  );
+-}
+-
+-function first(value: string | string[] | undefined): string {
+-  return Array.isArray(value) ? value[0] ?? "" : value ?? "";
+-}
+-
+-function positiveInt(value: string, fallback: number): number {
+-  const parsed = Number.parseInt(value, 10);
+-  return Number.isInteger(parsed) && parsed > 0 ? parsed : fallback;
+-}
+-
+-function pageHref(query: Record<string, string | string[] | undefined>, page: number): string {
+-  const params = new URLSearchParams();
+-  for (const [key, raw] of Object.entries(query)) {
+-    const value = first(raw);
+-    if (value && key !== "page") params.set(key, value);
+-  }
+-  params.set("page", String(page));
+-  return `/products?${params.toString()}`;
+-}
+diff --git a/apps/storefront/components/data-grid.tsx b/apps/storefront/components/data-grid.tsx
+deleted file mode 100644
+index 72cf873..0000000
+--- a/apps/storefront/components/data-grid.tsx
++++ /dev/null
+@@ -1,17 +0,0 @@
+-import { displayValue } from "@/lib/values";
+-
+-export function DataGrid({ data }: { data: Record<string, unknown> }) {
+-  const entries = Object.entries(data);
+-  if (entries.length === 0) return <p className="muted">No public fields are available for this entry.</p>;
+-
+-  return (
+-    <dl className="data-grid">
+-      {entries.map(([key, value]) => (
+-        <div key={key}>
+-          <dt>{key}</dt>
+-          <dd><pre>{displayValue(value)}</pre></dd>
+-        </div>
+-      ))}
+-    </dl>
+-  );
+-}
+diff --git a/apps/storefront/components/product-card.tsx b/apps/storefront/components/product-card.tsx
+deleted file mode 100644
+index e3bd1c7..0000000
+--- a/apps/storefront/components/product-card.tsx
++++ /dev/null
+@@ -1,27 +0,0 @@
+-import type { CatalogProduct } from "@beyondx/theme-sdk";
+-import Link from "next/link";
+-import { mediaUrl } from "@/lib/beyondx";
+-
+-export function ProductCard({ product }: { product: CatalogProduct }) {
+-  const image = product.media[0];
+-  return (
+-    <article className="product-card">
+-      <Link className="product-media" href={`/products/${product.slug}`}>
+-        {image ? (
+-          <img src={mediaUrl(image.id)} alt={image.altText || product.name} loading="lazy" />
+-        ) : (
+-          <span className="media-placeholder">No public media</span>
+-        )}
+-      </Link>
+-      <div className="product-card-body">
+-        <div className="product-meta-row">
+-          <span>{product.brand?.name || "Unbranded"}</span>
+-          <span>{product.variants.length} variant{product.variants.length === 1 ? "" : "s"}</span>
+-        </div>
+-        <h2><Link href={`/products/${product.slug}`}>{product.name}</Link></h2>
+-        <p>{product.description || "No product description yet."}</p>
+-        <Link className="text-link" href={`/products/${product.slug}`}>View product →</Link>
+-      </div>
+-    </article>
+-  );
+-}
+diff --git a/apps/storefront/components/site-header.tsx b/apps/storefront/components/site-header.tsx
+deleted file mode 100644
+index db647e3..0000000
+--- a/apps/storefront/components/site-header.tsx
++++ /dev/null
+@@ -1,19 +0,0 @@
+-import Link from "next/link";
+-
+-export function SiteHeader() {
+-  return (
+-    <header className="site-header">
+-      <Link className="brand" href="/">
+-        <span className="brand-mark">BX</span>
+-        <span>
+-          <strong>BeyondX</strong>
+-          <small>Theme SDK reference</small>
+-        </span>
+-      </Link>
+-      <nav aria-label="Primary navigation">
+-        <Link href="/">Home</Link>
+-        <Link href="/products">Products</Link>
+-      </nav>
+-    </header>
+-  );
+-}
+diff --git a/apps/storefront/lib/beyondx.ts b/apps/storefront/lib/beyondx.ts
+deleted file mode 100644
+index 94e35aa..0000000
+--- a/apps/storefront/lib/beyondx.ts
++++ /dev/null
+@@ -1,32 +0,0 @@
+-import { createBeyondXThemeClient, type BeyondXFetch } from "@beyondx/theme-sdk";
+-
+-interface NextFetchInit extends RequestInit {
+-  next?: {
+-    revalidate?: number;
+-    tags?: string[];
+-  };
+-}
+-
+-const API_URL = process.env.NEXT_PUBLIC_API_URL?.trim() || "http://127.0.0.1:4000";
+-const REVALIDATE_SECONDS = 60;
+-
+-const storefrontFetch: BeyondXFetch = (input, init) => {
+-  const request: NextFetchInit = {
+-    ...init,
+-    next: { revalidate: REVALIDATE_SECONDS, tags: ["beyondx-storefront"] },
+-  };
+-  return fetch(input, request);
+-};
+-
+-export const beyondx = createBeyondXThemeClient({
+-  baseUrl: API_URL,
+-  fetch: storefrontFetch,
+-});
+-
+-export function mediaUrl(assetOrId: string | { id: string }): string {
+-  return beyondx.media.url(assetOrId);
+-}
+-
+-export function apiBaseUrl(): string {
+-  return API_URL;
+-}
+diff --git a/apps/storefront/lib/seo.ts b/apps/storefront/lib/seo.ts
+deleted file mode 100644
+index 5f3b580..0000000
+--- a/apps/storefront/lib/seo.ts
++++ /dev/null
+@@ -1,51 +0,0 @@
+-import type { Metadata } from "next";
+-import type { CatalogProduct, ContentEntry } from "@beyondx/theme-sdk";
+-import { mediaUrl } from "@/lib/beyondx";
+-
+-const SITE_URL = process.env.NEXT_PUBLIC_STOREFRONT_URL?.trim() || "http://localhost:3001";
+-
+-export function siteUrl(path = "/"): string {
+-  return new URL(path, SITE_URL.endsWith("/") ? SITE_URL : `${SITE_URL}/`).toString();
+-}
+-
+-export function productMetadata(product: CatalogProduct): Metadata {
+-  const title = product.name;
+-  const description = product.description || `View ${product.name} on BeyondX.`;
+-  const image = product.media[0];
+-
+-  return {
+-    title,
+-    description,
+-    alternates: { canonical: siteUrl(`/products/${product.slug}`) },
+-    openGraph: {
+-      title,
+-      description,
+-      type: "website",
+-      url: siteUrl(`/products/${product.slug}`),
+-      ...(image ? { images: [{ url: mediaUrl(image.id), alt: image.altText || product.name }] } : {}),
+-    },
+-  };
+-}
+-
+-export function contentMetadata(entry: ContentEntry): Metadata {
+-  const title = entry.seoTitle || readableTitle(entry);
+-  const description = entry.seoDescription || null;
+-  const path = `/content/${entry.contentTypeApiId}/${entry.slug}`;
+-
+-  return {
+-    title,
+-    ...(description ? { description } : {}),
+-    alternates: { canonical: siteUrl(path) },
+-    openGraph: {
+-      title,
+-      ...(description ? { description } : {}),
+-      type: "article",
+-      url: siteUrl(path),
+-    },
+-  };
+-}
+-
+-export function readableTitle(entry: ContentEntry): string {
+-  const candidate = entry.data.title ?? entry.data.name ?? entry.data.heading;
+-  return typeof candidate === "string" && candidate.trim() ? candidate : entry.slug.replaceAll("-", " ");
+-}
+diff --git a/apps/storefront/lib/values.ts b/apps/storefront/lib/values.ts
+deleted file mode 100644
+index ada55e3..0000000
+--- a/apps/storefront/lib/values.ts
++++ /dev/null
+@@ -1,10 +0,0 @@
+-export function displayValue(value: unknown): string {
+-  if (value === null || value === undefined) return "—";
+-  if (typeof value === "string") return value;
+-  if (typeof value === "number" || typeof value === "boolean") return String(value);
+-  try {
+-    return JSON.stringify(value, null, 2);
+-  } catch {
+-    return "[unserializable value]";
+-  }
+-}
+diff --git a/apps/storefront/next-env.d.ts b/apps/storefront/next-env.d.ts
+deleted file mode 100644
+index 1b3be08..0000000
+--- a/apps/storefront/next-env.d.ts
++++ /dev/null
+@@ -1,5 +0,0 @@
+-/// <reference types="next" />
+-/// <reference types="next/image-types/global" />
+-
+-// NOTE: This file should not be edited
+-// see https://nextjs.org/docs/app/api-reference/config/typescript for more information.
+diff --git a/apps/storefront/next.config.mjs b/apps/storefront/next.config.mjs
+deleted file mode 100644
+index 38ed20c..0000000
+--- a/apps/storefront/next.config.mjs
++++ /dev/null
+@@ -1,19 +0,0 @@
+-/** @type {import('next').NextConfig} */
+-const nextConfig = {
+-  output: "standalone",
+-  poweredByHeader: false,
+-  reactStrictMode: true,
+-  transpilePackages: ["@beyondx/theme-sdk"],
+-  webpack(config) {
+-    config.resolve.extensionAlias = {
+-      ...config.resolve.extensionAlias,
+-      ".js": [".ts", ".tsx", ".js"],
+-      ".jsx": [".tsx", ".jsx"],
+-      ".mjs": [".mts", ".mjs"],
+-      ".cjs": [".cts", ".cjs"],
+-    };
+-    return config;
+-  },
+-};
+-
+-export default nextConfig;
+diff --git a/apps/storefront/package.json b/apps/storefront/package.json
+deleted file mode 100644
+index 3c0b282..0000000
+--- a/apps/storefront/package.json
++++ /dev/null
+@@ -1,25 +0,0 @@
+-{
+-  "name": "@beyondx/storefront",
+-  "version": "0.6.2",
+-  "private": true,
+-  "type": "module",
+-  "scripts": {
+-    "dev": "next dev -p 3001",
+-    "start": "next start -p 3001",
+-    "build": "next build",
+-    "clean": "rm -rf .next",
+-    "lint": "eslint app components lib tests --max-warnings=0",
+-    "typecheck": "tsc --noEmit",
+-    "test": "vitest run"
+-  },
+-  "dependencies": {
+-    "@beyondx/theme-sdk": "workspace:*",
+-    "next": "15.5.2",
+-    "react": "19.1.1",
+-    "react-dom": "19.1.1"
+-  },
+-  "devDependencies": {
+-    "@types/react": "19.1.12",
+-    "@types/react-dom": "19.1.9"
+-  }
+-}
+diff --git a/apps/storefront/tests/seo.test.ts b/apps/storefront/tests/seo.test.ts
+deleted file mode 100644
+index a776279..0000000
+--- a/apps/storefront/tests/seo.test.ts
++++ /dev/null
+@@ -1,11 +0,0 @@
+-import { describe, expect, it } from "vitest";
+-import { displayValue } from "../lib/values";
+-
+-// Keep this test framework-agnostic: the Next build validates route/metadata integration.
+-describe("storefront value rendering", () => {
+-  it("renders schema-driven values safely", () => {
+-    expect(displayValue({ battery: 1500 })).toContain('"battery": 1500');
+-    expect(displayValue(null)).toBe("—");
+-    expect(displayValue(true)).toBe("true");
+-  });
+-});
+diff --git a/apps/storefront/tsconfig.json b/apps/storefront/tsconfig.json
+deleted file mode 100644
+index ad19a51..0000000
+--- a/apps/storefront/tsconfig.json
++++ /dev/null
+@@ -1,17 +0,0 @@
+-{
+-  "extends": "../../tsconfig.base.json",
+-  "compilerOptions": {
+-    "target": "ES2017",
+-    "lib": ["dom", "dom.iterable", "ES2022"],
+-    "allowJs": false,
+-    "noEmit": true,
+-    "module": "esnext",
+-    "moduleResolution": "bundler",
+-    "jsx": "preserve",
+-    "incremental": true,
+-    "plugins": [{ "name": "next" }],
+-    "paths": { "@/*": ["./*"] }
+-  },
+-  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
+-  "exclude": ["node_modules"]
+-}
+diff --git a/docs/FRONTEND-INTEGRATION-CONTRACT.md b/docs/FRONTEND-INTEGRATION-CONTRACT.md
+new file mode 100644
+index 0000000..daf7636
+--- /dev/null
++++ b/docs/FRONTEND-INTEGRATION-CONTRACT.md
+@@ -0,0 +1,236 @@
++# BeyondX Frontend Integration Contract
++
++This document is the framework-independent contract between BeyondX and a website/theme.
++
++## 1. Boundary
++
++A frontend connects to the BeyondX **public HTTP API**. It must not import Prisma, repositories, storage adapters, Admin code or module internals.
++
++```text
++Admin -> Database -> Public API -> Frontend adapter -> UI
++```
++
++The frontend can live in a separate repository and can be deployed independently. The only required configuration is the BeyondX API base URL.
++
++Example:
++
++```env
++BEYONDX_API_URL=https://api.example.com
++```
++
++For browser-to-API requests, the frontend origin must also be allowed by BeyondX `CORS_ORIGIN`. Server-to-server requests do not require browser CORS.
++
++## 2. Capability discovery
++
++```http
++GET /api/v1/theme/manifest
++```
++
++Use the manifest when a generic theme needs to discover which BeyondX capabilities and endpoints are available. Do not infer backend tables or module internals from the frontend.
++
++## 3. Site settings
++
++```http
++GET /api/v1/site/settings
++```
++
++Response:
++
++```json
++{
++  "settings": {
++    "id": "...",
++    "schemaKey": "site-settings",
++    "status": "ACTIVE",
++    "values": {
++      "siteName": "Example",
++      "companyName": "Example LLC",
++      "logo": "media-id",
++      "favicon": "media-id",
++      "email": "hello@example.com",
++      "phone": "+1 555 000 0000",
++      "siteUrl": "https://www.example.com",
++      "defaultLocale": "en",
++      "seoTitle": "Example",
++      "seoDescription": "...",
++      "seoImage": "media-id"
++    }
++  }
++}
++```
++
++The exact `values` object is content data. Themes should gracefully tolerate optional values.
++
++## 4. Navigation
++
++```http
++GET /api/v1/navigation
++```
++
++Response:
++
++```json
++{
++  "navigation": {
++    "header": [
++      {
++        "label": "About",
++        "href": "/about",
++        "style": "LINK",
++        "openInNewTab": false
++      }
++    ],
++    "footer": []
++  }
++}
++```
++
++Page links are resolved by BeyondX from the current published page slug. The frontend renders the returned `href`; it does not need the internal Page ID.
++
++## 5. Pages
++
++```http
++GET /api/v1/pages?page=1&pageSize=20
++GET /api/v1/pages/:slug
++```
++
++Only public ACTIVE records are delivered. A theme maps `page.values` to its own components. Common fields are `title`, `slug`, `excerpt`, `content`, `featuredImage`, `template`, `locale`, `seoTitle`, `seoDescription`, `ogImage`, `canonicalUrl` and `noIndex`.
++
++A theme can use one generic route such as `/:slug` for all corporate pages. Framework-specific page components are not required in BeyondX.
++
++## 6. Blog
++
++```http
++GET /api/v1/blog/posts?page=1&pageSize=20
++GET /api/v1/blog/posts/:slug
++GET /api/v1/blog/categories
++GET /api/v1/blog/tags
++```
++
++Common Blog Post values are `title`, `slug`, `excerpt`, `content`, `featuredImage`, `category`, `tags`, `authorName`, `publishedAt`, `locale`, `isFeatured`, and SEO values.
++
++## 7. Public media
++
++Metadata:
++
++```http
++GET /api/v1/media/:id
++```
++
++Binary/content URL:
++
++```http
++GET /api/v1/media/:id/content
++```
++
++Only PUBLIC media should be rendered by public themes. Media fields in CMS records store a MediaAsset ID, not a storage key. Never build storage paths in a theme.
++
++Example helper:
++
++```ts
++function mediaUrl(apiBaseUrl: string, id: string) {
++  return `${apiBaseUrl}/api/v1/media/${encodeURIComponent(id)}/content`;
++}
++```
++
++## 8. Contact form
++
++```http
++POST /api/v1/forms/contact
++Content-Type: application/json
++```
++
++```json
++{
++  "name": "Jane Doe",
++  "email": "jane@example.com",
++  "phone": "+1 555 000 0000",
++  "subject": "Hello",
++  "message": "I would like to contact you.",
++  "locale": "en",
++  "pageUrl": "/contact",
++  "website": ""
++}
++```
++
++`website` is a honeypot and real users must leave it empty. Successful submissions are stored in the private Admin Contact Inbox. There is no public endpoint for reading submissions.
++
++For universal themes, submitting through a server action/server route is recommended because it keeps the backend URL server-side and avoids browser CORS coupling.
++
++## 9. SEO
++
++Defaults:
++
++```http
++GET /api/v1/seo/config
++```
++
++Sitemap source data:
++
++```http
++GET /api/v1/seo/sitemap
++```
++
++A frontend uses these endpoints to generate metadata, canonical URLs, Open Graph tags, `robots.txt` and `sitemap.xml` on the **website domain**. BeyondX intentionally provides SEO data rather than pretending the API domain is the website domain.
++
++Page/Post `noIndex` overrides should be respected by the frontend. Sitemap data already omits entries that should not be indexed.
++
++## 10. Optional Theme SDK
++
++JavaScript/TypeScript frontends can optionally use `@beyondx/theme-sdk`:
++
++```ts
++const settings = await beyondx.site.getSettings();
++const navigation = await beyondx.navigation.get();
++const page = await beyondx.pages.get("about");
++const posts = await beyondx.blog.listPosts();
++const seo = await beyondx.seo.getConfig();
++```
++
++The SDK is not the architecture boundary. It is a typed wrapper around the public API. A PHP, mobile, Vue or other client can call the same REST endpoints directly.
++
++## 11. Caching and publishing
++
++Public GET responses are safe to cache according to the frontend's requirements. A reference Next.js theme can use time-based revalidation. A production theme may later add webhook-driven revalidation without changing the BeyondX content model.
++
++Private Admin APIs and private Media endpoints must never be used by public themes.
++
++## 12. Error handling
++
++Themes should handle these cases without exposing backend internals:
++
++- `404` page/post/media -> render framework 404.
++- API unavailable -> render an error/fallback state.
++- Missing optional Site Settings -> use theme defaults.
++- Empty Navigation -> render no menu or a theme fallback.
++- Empty Blog -> render an empty state.
++
++## 13. Minimal adapter pattern
++
++Keep HTTP calls in one adapter layer:
++
++```text
++src/lib/beyondx/
++├── client
++├── site
++├── navigation
++├── pages
++├── blog
++├── media
++├── forms
++└── seo
++```
++
++UI components consume adapter functions instead of calling BeyondX endpoints everywhere. This keeps a theme replaceable and prevents backend coupling.
++
++## 14. Deployment model
++
++A typical deployment is fully separate:
++
++```text
++admin.example.com  -> BeyondX Admin
++api.example.com    -> BeyondX API
++www.example.com    -> any frontend/theme
++```
++
++The frontend can be replaced or redeployed without changing BeyondX. BeyondX can be upgraded without owning the frontend's presentation layer as long as the public API contract remains compatible.
+diff --git a/package.json b/package.json
+index b85a8db..18f4bc1 100644
+--- a/package.json
++++ b/package.json
+@@ -31,7 +31,9 @@
+     "verify:phase2": "pnpm verify:phase1 && node scripts/verify-phase2.mjs",
+     "verify:phase3": "pnpm verify:phase2 && node scripts/verify-phase3.mjs",
+     "verify:phase4": "pnpm verify:phase3 && node scripts/verify-phase4.mjs",
+-    "verify:phase5": "pnpm verify:phase4 && node scripts/verify-phase5.mjs"
++    "verify:phase5": "pnpm verify:phase4 && node scripts/verify-phase5.mjs && node scripts/verify-headless-boundary.mjs",
++    "verify:headless": "node scripts/verify-headless-boundary.mjs",
++    "phase5c6:cleanup": "node scripts/apply-phase5c6-cleanup.mjs"
+   },
+   "devDependencies": {
+     "@types/node": "22.18.0",
+diff --git a/scripts/apply-phase5c6-cleanup.mjs b/scripts/apply-phase5c6-cleanup.mjs
+new file mode 100644
+index 0000000..e7985cf
+--- /dev/null
++++ b/scripts/apply-phase5c6-cleanup.mjs
+@@ -0,0 +1,21 @@
++import { existsSync, rmSync } from "node:fs";
++import { resolve } from "node:path";
++
++const root = process.cwd();
++const targets = [
++  "apps/storefront",
++  "PHASE5C-NEXT-INTEGRATION-README.md",
++  "PHASE5C-FIX1-README.md",
++];
++
++for (const target of targets) {
++  const path = resolve(root, target);
++  if (!existsSync(path)) {
++    console.log(`Already absent: ${target}`);
++    continue;
++  }
++  rmSync(path, { recursive: true, force: true });
++  console.log(`Removed: ${target}`);
++}
++
++console.log("Phase 5C.6 cleanup complete. Run pnpm install to refresh the workspace lockfile.");
+diff --git a/scripts/apply-phase5c6-cleanup.ps1 b/scripts/apply-phase5c6-cleanup.ps1
+new file mode 100644
+index 0000000..12bf5e9
+--- /dev/null
++++ b/scripts/apply-phase5c6-cleanup.ps1
+@@ -0,0 +1,8 @@
++$ErrorActionPreference = "Stop"
++$root = Resolve-Path (Join-Path $PSScriptRoot "..")
++Push-Location $root
++try {
++  node scripts/apply-phase5c6-cleanup.mjs
++} finally {
++  Pop-Location
++}
+diff --git a/scripts/verify-headless-boundary.mjs b/scripts/verify-headless-boundary.mjs
+new file mode 100644
+index 0000000..285d32b
+--- /dev/null
++++ b/scripts/verify-headless-boundary.mjs
+@@ -0,0 +1,48 @@
++import { existsSync, readFileSync } from "node:fs";
++import { resolve } from "node:path";
++
++const root = process.cwd();
++const failures = [];
++
++function read(path) {
++  return readFileSync(resolve(root, path), "utf8");
++}
++
++if (existsSync(resolve(root, "apps/storefront"))) {
++  failures.push("apps/storefront must not exist in BeyondX Core. Run scripts/apply-phase5c6-cleanup.ps1 if upgrading from Phase 5C.5.");
++}
++
++for (const path of [".env.example", "turbo.json"]) {
++  if (read(path).includes("NEXT_PUBLIC_STOREFRONT_URL")) {
++    failures.push(`${path} still contains NEXT_PUBLIC_STOREFRONT_URL`);
++  }
++}
++
++for (const path of [
++  "docs/FRONTEND-INTEGRATION-CONTRACT.md",
++  "packages/theme-sdk/src/client.ts",
++  "modules/theme/src/api/routes.ts",
++]) {
++  if (!existsSync(resolve(root, path))) failures.push(`Missing ${path}`);
++}
++
++const contract = read("docs/FRONTEND-INTEGRATION-CONTRACT.md");
++for (const endpoint of [
++  "/api/v1/site/settings",
++  "/api/v1/navigation",
++  "/api/v1/pages/:slug",
++  "/api/v1/blog/posts/:slug",
++  "/api/v1/media/:id/content",
++  "/api/v1/forms/contact",
++  "/api/v1/seo/config",
++  "/api/v1/seo/sitemap",
++]) {
++  if (!contract.includes(endpoint)) failures.push(`Frontend contract is missing ${endpoint}`);
++}
++
++if (failures.length > 0) {
++  console.error("BeyondX headless boundary verification failed:\n- " + failures.join("\n- "));
++  process.exit(1);
++}
++
++console.log("BeyondX headless boundary verified: Core is frontend-independent.");
+diff --git a/scripts/verify-phase5.mjs b/scripts/verify-phase5.mjs
+index c581288..79dc23b 100644
+--- a/scripts/verify-phase5.mjs
++++ b/scripts/verify-phase5.mjs
+@@ -97,11 +97,13 @@ requireText("packages/theme-sdk/src/types.ts", ["SeoConfig", "SeoSitemapEntry",
+ requireText("packages/theme-sdk/tests/client.test.ts", ["reads SEO defaults and sitemap entries", "/api/v1/seo/sitemap"]);
+ requireText("modules/theme/src/api/routes.ts", ["seo: true", 'seoConfig: "/api/v1/seo/config"', 'seoSitemap: "/api/v1/seo/sitemap"']);
+ 
+-requireText("package.json", ["verify:phase5"]);
++requireText("package.json", ["verify:phase5", "verify:headless", "verify-headless-boundary.mjs"]);
++requireText("docs/FRONTEND-INTEGRATION-CONTRACT.md", ["Frontend Integration Contract", "/api/v1/navigation", "/api/v1/forms/contact", "/api/v1/seo/sitemap"]);
++requireText("PHASE5C6-HEADLESS-INTEGRATION-README.md", ["Headless Boundary", "apps/storefront", "External reference theme"]);
+ 
+ if (failures.length > 0) {
+-  console.error("Phase 5C.5 verification failed:\n- " + failures.join("\n- "));
++  console.error("Phase 5C.6 verification failed:\n- " + failures.join("\n- "));
+   process.exit(1);
+ }
+ 
+-console.log("Phase 5C.5 SEO + Public Delivery structure verified successfully.");
++console.log("Phase 5C.6 Headless Integration structure verified successfully.");
+diff --git a/turbo.json b/turbo.json
+index e14497e..b49c6d2 100644
+--- a/turbo.json
++++ b/turbo.json
+@@ -25,7 +25,6 @@
+     "EMAIL_VERIFICATION_EXPIRES_IN",
+     "ADMIN_URL",
+     "NEXT_PUBLIC_API_URL",
+-    "NEXT_PUBLIC_STOREFRONT_URL",
+     "ADMIN_EMAIL",
+     "ADMIN_PASSWORD",
+     "ADMIN_FIRST_NAME",

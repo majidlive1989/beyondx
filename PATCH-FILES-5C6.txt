@@ -1,0 +1,13 @@
+README.md
+.env.example
+turbo.json
+package.json
+PHASE5C6-HEADLESS-INTEGRATION-README.md
+docs/FRONTEND-INTEGRATION-CONTRACT.md
+scripts/verify-headless-boundary.mjs
+scripts/apply-phase5c6-cleanup.mjs
+scripts/apply-phase5c6-cleanup.ps1
+scripts/verify-phase5.mjs
+apps/storefront/ (deleted by cleanup script or Git patch)
+PHASE5C-NEXT-INTEGRATION-README.md (deleted)
+PHASE5C-FIX1-README.md (deleted)

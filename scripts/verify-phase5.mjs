@@ -97,11 +97,13 @@ requireText("packages/theme-sdk/src/types.ts", ["SeoConfig", "SeoSitemapEntry", 
 requireText("packages/theme-sdk/tests/client.test.ts", ["reads SEO defaults and sitemap entries", "/api/v1/seo/sitemap"]);
 requireText("modules/theme/src/api/routes.ts", ["seo: true", 'seoConfig: "/api/v1/seo/config"', 'seoSitemap: "/api/v1/seo/sitemap"']);
 
-requireText("package.json", ["verify:phase5"]);
+requireText("package.json", ["verify:phase5", "verify:headless", "verify-headless-boundary.mjs"]);
+requireText("docs/FRONTEND-INTEGRATION-CONTRACT.md", ["Frontend Integration Contract", "/api/v1/navigation", "/api/v1/forms/contact", "/api/v1/seo/sitemap"]);
+requireText("PHASE5C6-HEADLESS-INTEGRATION-README.md", ["Headless Boundary", "apps/storefront", "External reference theme"]);
 
 if (failures.length > 0) {
-  console.error("Phase 5C.5 verification failed:\n- " + failures.join("\n- "));
+  console.error("Phase 5C.6 verification failed:\n- " + failures.join("\n- "));
   process.exit(1);
 }
 
-console.log("Phase 5C.5 SEO + Public Delivery structure verified successfully.");
+console.log("Phase 5C.6 Headless Integration structure verified successfully.");

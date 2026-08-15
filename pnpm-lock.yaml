@@ -149,28 +149,6 @@ importers:
         specifier: workspace:*
         version: link:../../packages/testing
 
-  apps/storefront:
-    dependencies:
-      '@beyondx/theme-sdk':
-        specifier: workspace:*
-        version: link:../../packages/theme-sdk
-      next:
-        specifier: 15.5.2
-        version: 15.5.2(react-dom@19.1.1(react@19.1.1))(react@19.1.1)
-      react:
-        specifier: 19.1.1
-        version: 19.1.1
-      react-dom:
-        specifier: 19.1.1
-        version: 19.1.1(react@19.1.1)
-    devDependencies:
-      '@types/react':
-        specifier: 19.1.12
-        version: 19.1.12
-      '@types/react-dom':
-        specifier: 19.1.9
-        version: 19.1.9(@types/react@19.1.12)
-
   modules/catalog:
     dependencies:
       '@beyondx/core':
