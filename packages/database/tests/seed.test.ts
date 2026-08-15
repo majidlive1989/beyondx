@@ -66,6 +66,10 @@ function createSeedClient(): {
         state.schemas.add(input.where.key);
         return Promise.resolve({ id: input.where.key, key: input.where.key });
       },
+      findUnique: (input: { where: { key: string } }) =>
+        Promise.resolve(state.schemas.has(input.where.key)
+          ? { id: input.where.key, key: input.where.key }
+          : null),
     },
     dataField: {
       upsert: (input: { where: { schemaId_key: { schemaId: string; key: string } } }) => {
@@ -136,8 +140,8 @@ describe("BeyondX database seed", () => {
 
     expect(state.modules.size).toBe(9);
     expect(state.permissions.size).toBe(37);
-    expect(state.schemas).toEqual(new Set(["site-social-link", "site-settings", "blog-category", "blog-tag", "site-page", "blog-post"]));
-    expect(state.fields.size).toBe(55);
+    expect(state.schemas).toEqual(new Set(["site-social-link", "site-settings", "blog-category", "blog-tag", "site-page", "blog-post", "site-navigation-item", "site-navigation"]));
+    expect(state.fields.size).toBe(64);
     expect(state.roles.size).toBe(3);
     expect(state.users.size).toBe(1);
     expect(state.userRoles.size).toBe(1);

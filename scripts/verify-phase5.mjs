@@ -66,11 +66,21 @@ requireText("apps/admin/components/admin-shell.tsx", ['href: "/blog"', 'label: "
 requireText("apps/admin/lib/api.ts", ["getDynamicRecord", "/api/v1/admin/data/"]);
 requireText("apps/admin/app/globals.css", ["Phase 5C.2B Editorial Admin UX", "blog-editor-layout", "editor-tag-chip"]);
 
+requireText("packages/database/prisma/seed-runner.ts", ["seedSiteNavigation", 'key: "site-navigation-item"', 'key: "site-navigation"', "headerItems", "footerItems"]);
+requireText("packages/database/tests/seed.test.ts", ["site-navigation-item", "site-navigation", "state.fields.size"]);
+requireText("modules/schema/src/api/routes.ts", ['"/api/v1/navigation"', "resolveNavigation", "navigationEnvelopeJsonSchema"]);
+requireText("modules/schema/tests/navigation-route.test.ts", ["Public navigation delivery", '"page-home"', '"https://example.com"']);
+requireText("apps/admin/app/navigation/page.tsx", ["Header menu", "Footer menu", "Save navigation", "Move"]);
+requireText("apps/admin/components/admin-shell.tsx", ['href: "/navigation"', 'label: "Navigation"', '"site-navigation"']);
+requireText("packages/theme-sdk/src/client.ts", ["readonly navigation", '"/api/v1/navigation"']);
+requireText("packages/theme-sdk/src/types.ts", ["NavigationPayload", "NavigationItem", "navigation"]);
+requireText("modules/theme/src/api/routes.ts", ["navigation: true", 'navigation: "/api/v1/navigation"']);
+
 requireText("package.json", ["verify:phase5"]);
 
 if (failures.length > 0) {
-  console.error("Phase 5C.2 verification failed:\n- " + failures.join("\n- "));
+  console.error("Phase 5C.3 verification failed:\n- " + failures.join("\n- "));
   process.exit(1);
 }
 
-console.log("Phase 5C.2 Corporate Pages + Blog structure verified successfully.");
+console.log("Phase 5C.3 Navigation structure verified successfully.");

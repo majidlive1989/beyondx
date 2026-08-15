@@ -228,6 +228,12 @@ export function createSchemaRoutes(service: SchemaService): HttpRouteDefinition[
       return { body: publicPage(await service.listRecords("blog-tag", query, true)) };
     }, { querystring: publicRecordListJsonSchema, response: { 200: recordPageJsonSchema } }),
 
+    publicContentRoute("GET", "/api/v1/navigation", "Read resolved public header and footer navigation", async () => {
+      const page = await service.listRecords("site-navigation", { page: 1, pageSize: 1, status: "ACTIVE" }, true);
+      const record = page.items[0] ?? null;
+      return { body: { navigation: record ? await resolveNavigation(service, record) : { header: [], footer: [] } } };
+    }, { response: { 200: navigationEnvelopeJsonSchema } }),
+
     publicRoute("GET", "/api/v1/site/settings", "Read public site settings", async () => {
       const page = await service.listRecords("site-settings", { page: 1, pageSize: 1, status: "ACTIVE" }, true);
       return { body: { settings: page.items[0] ? publicRecord(page.items[0]) : null } };
@@ -253,6 +259,75 @@ function publicRoute(method: HttpRouteDefinition["method"], path: string, summar
 }
 function publicContentRoute(method: HttpRouteDefinition["method"], path: string, summary: string, handler: HttpRouteDefinition["handler"], schema?: Record<string, unknown>): HttpRouteDefinition {
   return { method, path, summary, tags: ["Corporate CMS"], public: true, ...(schema === undefined ? {} : { schema }), handler };
+}
+
+
+interface PublicNavigationItem {
+  label: string;
+  href: string;
+  style: "LINK" | "BUTTON";
+  openInNewTab: boolean;
+}
+
+interface PublicNavigation {
+  header: PublicNavigationItem[];
+  footer: PublicNavigationItem[];
+}
+
+async function resolveNavigation(service: SchemaService, record: DataRecord): Promise<PublicNavigation> {
+  return {
+    header: await resolveNavigationItems(service, record.values.headerItems),
+    footer: await resolveNavigationItems(service, record.values.footerItems),
+  };
+}
+
+async function resolveNavigationItems(service: SchemaService, value: unknown): Promise<PublicNavigationItem[]> {
+  if (!Array.isArray(value)) return [];
+  const resolved = await Promise.all(value.map(async (entry): Promise<PublicNavigationItem | null> => {
+    const item = objectRecord(entry);
+    if (!item || item.enabled === false) return null;
+
+    const label = stringRecordValue(item.label);
+    if (!label) return null;
+
+    const type = item.type === "PAGE" || item.type === "BLOG" || item.type === "CUSTOM"
+      ? item.type
+      : "CUSTOM";
+
+    let href = "";
+    if (type === "BLOG") {
+      href = "/blog";
+    } else if (type === "CUSTOM") {
+      href = stringRecordValue(item.url);
+    } else {
+      const pageId = stringRecordValue(item.pageId);
+      if (!pageId) return null;
+      const linkedPage = await service.getRecord("site-page", pageId, true).catch(() => null);
+      const slug = linkedPage ? stringRecordValue(linkedPage.values.slug) : "";
+      if (!slug) return null;
+      href = slug === "home" ? "/" : `/${slug.replace(/^\/+/, "")}`;
+    }
+
+    if (!href) return null;
+    return {
+      label,
+      href,
+      style: item.style === "BUTTON" ? "BUTTON" : "LINK",
+      openInNewTab: item.openInNewTab === true,
+    };
+  }));
+
+  return resolved.filter((item): item is PublicNavigationItem => item !== null);
+}
+
+function objectRecord(value: unknown): Record<string, unknown> | null {
+  return value !== null && typeof value === "object" && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : null;
+}
+
+function stringRecordValue(value: unknown): string {
+  return typeof value === "string" ? value.trim() : "";
 }
 
 function actionMetadata(context: HttpRequestContext) {
@@ -296,6 +371,9 @@ const recordEnvelopeJsonSchema = { type: "object", required: ["record"], propert
 const pageEnvelopeJsonSchema = { type: "object", required: ["page"], properties: { page: recordJsonSchema } };
 const postEnvelopeJsonSchema = { type: "object", required: ["post"], properties: { post: recordJsonSchema } };
 const siteSettingsEnvelopeJsonSchema = { type: "object", required: ["settings"], properties: { settings: { anyOf: [recordJsonSchema, { type: "null" }] } } };
+const navigationItemJsonSchema = { type: "object", required: ["label", "href", "style", "openInNewTab"], properties: { label: { type: "string" }, href: { type: "string" }, style: { type: "string", enum: ["LINK", "BUTTON"] }, openInNewTab: { type: "boolean" } } };
+const navigationPayloadJsonSchema = { type: "object", required: ["header", "footer"], properties: { header: { type: "array", items: navigationItemJsonSchema }, footer: { type: "array", items: navigationItemJsonSchema } } };
+const navigationEnvelopeJsonSchema = { type: "object", required: ["navigation"], properties: { navigation: navigationPayloadJsonSchema } };
 const recordPageJsonSchema = { type: "object", required: ["items", "page", "pageSize", "total", "pageCount"], properties: { items: { type: "array", items: recordJsonSchema }, page: { type: "integer" }, pageSize: { type: "integer" }, total: { type: "integer" }, pageCount: { type: "integer" } } };
 const recordListJsonSchema = { type: "object", properties: { page: { type: "integer", minimum: 1 }, pageSize: { type: "integer", minimum: 1, maximum: 100 }, status: { type: "string", enum: ["DRAFT", "ACTIVE", "ARCHIVED"] } } };
 const publicRecordListJsonSchema = { type: "object", properties: { page: { type: "integer", minimum: 1 }, pageSize: { type: "integer", minimum: 1, maximum: 100 } } };

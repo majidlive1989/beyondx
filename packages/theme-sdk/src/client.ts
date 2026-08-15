@@ -14,6 +14,7 @@ import type {
   DiscussionSubmission,
   DiscussionThread,
   DynamicRecord,
+  NavigationPayload,
   PublicMediaAsset,
   SiteSettingsValues,
   ThemeDeliveryManifest,
@@ -71,6 +72,10 @@ export class BeyondXThemeClient {
 
   readonly site: {
     getSettings: <TValues extends Record<string, unknown> = SiteSettingsValues>() => Promise<DynamicRecord<TValues> | null>;
+  };
+
+  readonly navigation: {
+    get: () => Promise<NavigationPayload>;
   };
 
   readonly pages: {
@@ -134,6 +139,13 @@ export class BeyondXThemeClient {
       getSettings: async <TValues extends Record<string, unknown> = SiteSettingsValues>() => {
         const response = await this.get<{ settings: DynamicRecord<TValues> | null }>("/api/v1/site/settings");
         return response.settings;
+      },
+    };
+
+    this.navigation = {
+      get: async () => {
+        const response = await this.get<{ navigation: NavigationPayload }>("/api/v1/navigation");
+        return response.navigation;
       },
     };
 

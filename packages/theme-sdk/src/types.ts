@@ -15,6 +15,7 @@ export interface ThemeDeliveryManifest {
     dynamicData: boolean;
     siteGlobals: boolean;
     corporateContent: boolean;
+    navigation: boolean;
     publicMedia: boolean;
     catalog: boolean;
     discussions: boolean;
@@ -109,6 +110,18 @@ export interface SiteSettingsValues extends Record<string, unknown> {
   seoImage?: string | null;
 }
 
+
+export interface NavigationItem {
+  label: string;
+  href: string;
+  style: "LINK" | "BUTTON";
+  openInNewTab: boolean;
+}
+
+export interface NavigationPayload {
+  header: NavigationItem[];
+  footer: NavigationItem[];
+}
 
 export interface CorporatePageValues extends Record<string, unknown> {
   title: string;

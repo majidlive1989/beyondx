@@ -22,7 +22,7 @@ describe("BeyondX theme SDK", () => {
       platform: "BeyondX",
       apiVersion: "v1",
       sdkPackage: "@beyondx/theme-sdk",
-      capabilities: { content: true, dynamicData: true, siteGlobals: true, corporateContent: true, publicMedia: true, catalog: true, discussions: false, commerce: false },
+      capabilities: { content: true, dynamicData: true, siteGlobals: true, corporateContent: true, navigation: true, publicMedia: true, catalog: true, discussions: false, commerce: false },
       endpoints: {},
     }));
     const manifest = await createBeyondXThemeClient({ baseUrl: "https://api.example.com", fetch: fetcher }).manifest();
@@ -116,6 +116,23 @@ describe("BeyondX theme SDK", () => {
       "https://api.example.com/api/v1/blog/tags",
     ]);
     expect(post.values.slug).toBe("hello-beyondx");
+  });
+
+  it("reads resolved website navigation from the explicit public API", async () => {
+    let requested = "";
+    const fetcher: BeyondXFetch = (input) => {
+      requested = String(input);
+      return Promise.resolve(jsonResponse({
+        navigation: {
+          header: [{ label: "About", href: "/about", style: "LINK", openInNewTab: false }],
+          footer: [{ label: "Contact", href: "/contact", style: "LINK", openInNewTab: false }],
+        },
+      }));
+    };
+    const navigation = await createBeyondXThemeClient({ baseUrl: "https://api.example.com", fetch: fetcher }).navigation.get();
+    expect(requested).toBe("https://api.example.com/api/v1/navigation");
+    expect(navigation.header[0]?.href).toBe("/about");
+    expect(navigation.footer[0]?.label).toBe("Contact");
   });
 
   it("builds public media URLs and reads media metadata", async () => {

@@ -130,13 +130,16 @@ export function AdminShell({ children }: { children: ReactNode }) {
 
     const siteSettingsSchema = contentSchemas.find((schema) => schema.key === "site-settings") ?? null;
     const corporateSchemas = new Map(contentSchemas.map((schema) => [schema.key, schema]));
-    const reservedCorporateKeys = new Set(["site-settings", "site-page", "blog-post", "blog-category", "blog-tag"]);
+    const reservedCorporateKeys = new Set(["site-settings", "site-page", "blog-post", "blog-category", "blog-tag", "site-navigation"]);
     const corporateContent: NavItem[] = [
       ...(corporateSchemas.has("site-page")
         ? [{ href: "/data/site-page", label: "Pages", permission: "schema.records.read" }]
         : []),
       ...(corporateSchemas.has("blog-post")
         ? [{ href: "/blog", label: "Blog", permission: "schema.records.read" }]
+        : []),
+      ...(corporateSchemas.has("site-navigation")
+        ? [{ href: "/navigation", label: "Navigation", permission: "schema.records.read" }]
         : []),
     ];
     const generatedContent: NavItem[] = contentSchemas

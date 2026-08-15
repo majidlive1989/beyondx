@@ -125,6 +125,7 @@ export async function seedDatabase(
 
   await seedSiteGlobals(prisma);
   await seedCorporateContent(prisma);
+  await seedSiteNavigation(prisma);
 
   for (const [id, description] of IDENTITY_SEED_PERMISSIONS) {
     await prisma.permission.upsert({
@@ -466,6 +467,98 @@ async function seedCorporateContent(prisma: PrismaClient): Promise<void> {
     { key: "noIndex", label: "No index", type: "BOOLEAN", position: 160 },
   ];
   for (const field of postFields) await upsertSeedField(prisma, post.id, field);
+}
+
+
+async function seedSiteNavigation(prisma: PrismaClient): Promise<void> {
+  const page = await prisma.dataSchema.findUnique({ where: { key: "site-page" } });
+  if (!page) throw new Error("site-page schema must exist before seeding site navigation");
+
+  const item = await prisma.dataSchema.upsert({
+    where: { key: "site-navigation-item" },
+    update: {
+      displayName: "Navigation item",
+      pluralName: "Navigation items",
+      description: "Reusable header/footer navigation link",
+      kind: "COMPONENT",
+      publicRead: false,
+      system: true,
+    },
+    create: {
+      key: "site-navigation-item",
+      displayName: "Navigation item",
+      pluralName: "Navigation items",
+      description: "Reusable header/footer navigation link",
+      kind: "COMPONENT",
+      publicRead: false,
+      system: true,
+    },
+  });
+
+  await upsertSeedField(prisma, item.id, { key: "label", label: "Label", type: "TEXT", required: true, position: 10 });
+  await upsertSeedField(prisma, item.id, {
+    key: "type",
+    label: "Link type",
+    type: "ENUM",
+    required: true,
+    position: 20,
+    settings: { options: ["PAGE", "BLOG", "CUSTOM"] },
+  });
+  await upsertSeedField(prisma, item.id, {
+    key: "pageId",
+    label: "Page",
+    type: "RELATION",
+    position: 30,
+    relationTargetSchemaId: page.id,
+  });
+  await upsertSeedField(prisma, item.id, { key: "url", label: "Custom URL", type: "TEXT", position: 40 });
+  await upsertSeedField(prisma, item.id, {
+    key: "style",
+    label: "Style",
+    type: "ENUM",
+    position: 50,
+    settings: { options: ["LINK", "BUTTON"] },
+  });
+  await upsertSeedField(prisma, item.id, { key: "openInNewTab", label: "Open in new tab", type: "BOOLEAN", position: 60 });
+  await upsertSeedField(prisma, item.id, { key: "enabled", label: "Enabled", type: "BOOLEAN", position: 70 });
+
+  const navigation = await prisma.dataSchema.upsert({
+    where: { key: "site-navigation" },
+    update: {
+      displayName: "Navigation",
+      pluralName: "Navigation",
+      description: "Public header and footer navigation managed from one simple workspace",
+      kind: "SINGLE",
+      publicRead: true,
+      system: true,
+    },
+    create: {
+      key: "site-navigation",
+      displayName: "Navigation",
+      pluralName: "Navigation",
+      description: "Public header and footer navigation managed from one simple workspace",
+      kind: "SINGLE",
+      publicRead: true,
+      system: true,
+    },
+  });
+
+  await upsertSeedField(prisma, navigation.id, {
+    key: "headerItems",
+    label: "Header links",
+    type: "COMPONENT",
+    repeatable: true,
+    position: 10,
+    settings: { componentSchemaId: item.id },
+  });
+  await upsertSeedField(prisma, navigation.id, {
+    key: "footerItems",
+    label: "Footer links",
+    type: "COMPONENT",
+    repeatable: true,
+    position: 20,
+    settings: { componentSchemaId: item.id },
+  });
 }
 
 interface SeedFieldInput {

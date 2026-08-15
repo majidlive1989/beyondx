@@ -9,6 +9,7 @@ export interface ThemeDeliveryManifest {
     dynamicData: true;
     siteGlobals: true;
     corporateContent: true;
+    navigation: true;
     publicMedia: true;
     catalog: boolean;
     discussions: boolean;
@@ -20,6 +21,7 @@ export interface ThemeDeliveryManifest {
     dynamicData: "/api/v1/data/:schemaKey";
     dynamicRecord: "/api/v1/data/:schemaKey/:id";
     siteSettings: "/api/v1/site/settings";
+    navigation: "/api/v1/navigation";
     pages: "/api/v1/pages";
     page: "/api/v1/pages/:slug";
     blogPosts: "/api/v1/blog/posts";
@@ -67,6 +69,7 @@ export function buildThemeDeliveryManifest(options: ThemeRouteOptions): ThemeDel
       dynamicData: true,
       siteGlobals: true,
       corporateContent: true,
+      navigation: true,
       publicMedia: true,
       catalog,
       discussions,
@@ -78,6 +81,7 @@ export function buildThemeDeliveryManifest(options: ThemeRouteOptions): ThemeDel
       dynamicData: "/api/v1/data/:schemaKey",
       dynamicRecord: "/api/v1/data/:schemaKey/:id",
       siteSettings: "/api/v1/site/settings",
+      navigation: "/api/v1/navigation",
       pages: "/api/v1/pages",
       page: "/api/v1/pages/:slug",
       blogPosts: "/api/v1/blog/posts",
@@ -104,12 +108,13 @@ const manifestJsonSchema = {
     sdkPackage: { type: "string", const: "@beyondx/theme-sdk" },
     capabilities: {
       type: "object",
-      required: ["content", "dynamicData", "siteGlobals", "corporateContent", "publicMedia", "catalog", "discussions", "commerce"],
+      required: ["content", "dynamicData", "siteGlobals", "corporateContent", "navigation", "publicMedia", "catalog", "discussions", "commerce"],
       properties: {
         content: { type: "boolean" },
         dynamicData: { type: "boolean" },
         siteGlobals: { type: "boolean" },
         corporateContent: { type: "boolean" },
+        navigation: { type: "boolean" },
         publicMedia: { type: "boolean" },
         catalog: { type: "boolean" },
         discussions: { type: "boolean" },
@@ -118,13 +123,14 @@ const manifestJsonSchema = {
     },
     endpoints: {
       type: "object",
-      required: ["content", "contentEntry", "dynamicData", "dynamicRecord", "siteSettings", "pages", "page", "blogPosts", "blogPost", "blogCategories", "blogTags", "media", "mediaContent", "catalogProducts", "catalogProduct", "discussions", "submitDiscussion"],
+      required: ["content", "contentEntry", "dynamicData", "dynamicRecord", "siteSettings", "navigation", "pages", "page", "blogPosts", "blogPost", "blogCategories", "blogTags", "media", "mediaContent", "catalogProducts", "catalogProduct", "discussions", "submitDiscussion"],
       properties: {
         content: { type: "string", const: "/api/v1/content/:apiId" },
         contentEntry: { type: "string", const: "/api/v1/content/:apiId/:slug" },
         dynamicData: { type: "string", const: "/api/v1/data/:schemaKey" },
         dynamicRecord: { type: "string", const: "/api/v1/data/:schemaKey/:id" },
         siteSettings: { type: "string", const: "/api/v1/site/settings" },
+        navigation: { type: "string", const: "/api/v1/navigation" },
         pages: { type: "string", const: "/api/v1/pages" },
         page: { type: "string", const: "/api/v1/pages/:slug" },
         blogPosts: { type: "string", const: "/api/v1/blog/posts" },
