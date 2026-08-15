@@ -6,6 +6,7 @@ import type {
   BlogPostValues,
   BlogTagValues,
   CatalogProduct,
+  ContactFormSubmissionInput,
   CorporatePageValues,
   ContentEntry,
   DiscussionKind,
@@ -14,8 +15,12 @@ import type {
   DiscussionSubmission,
   DiscussionThread,
   DynamicRecord,
+  FormSubmissionResult,
   NavigationPayload,
+  PublicFormName,
   PublicMediaAsset,
+  SeoConfig,
+  SeoSitemapPayload,
   SiteSettingsValues,
   ThemeDeliveryManifest,
 } from "./types.js";
@@ -76,6 +81,15 @@ export class BeyondXThemeClient {
 
   readonly navigation: {
     get: () => Promise<NavigationPayload>;
+  };
+
+  readonly forms: {
+    submit: (form: PublicFormName, input: ContactFormSubmissionInput) => Promise<FormSubmissionResult>;
+  };
+
+  readonly seo: {
+    getConfig: () => Promise<SeoConfig>;
+    getSitemap: () => Promise<SeoSitemapPayload>;
   };
 
   readonly pages: {
@@ -147,6 +161,24 @@ export class BeyondXThemeClient {
         const response = await this.get<{ navigation: NavigationPayload }>("/api/v1/navigation");
         return response.navigation;
       },
+    };
+
+    this.forms = {
+      submit: (form: string, input) => {
+        if (form !== "contact") throw new TypeError(`Unsupported BeyondX public form: ${form}`);
+        return this.request<FormSubmissionResult>("/api/v1/forms/contact", {
+          method: "POST",
+          body: JSON.stringify(input),
+        });
+      },
+    };
+
+    this.seo = {
+      getConfig: async () => {
+        const response = await this.get<{ seo: SeoConfig }>("/api/v1/seo/config");
+        return response.seo;
+      },
+      getSitemap: () => this.get<SeoSitemapPayload>("/api/v1/seo/sitemap"),
     };
 
     this.pages = {

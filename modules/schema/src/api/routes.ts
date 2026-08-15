@@ -121,6 +121,17 @@ const recordUpdateSchema = z.object({
 
 const extensionBodySchema = z.object({ values: objectValue.default({}) });
 
+const contactFormSubmissionSchema = z.object({
+  name: z.string().trim().min(1).max(120),
+  email: z.string().trim().email().max(320),
+  phone: z.string().trim().max(60).optional(),
+  subject: z.string().trim().max(180).optional(),
+  message: z.string().trim().min(2).max(5000),
+  locale: z.string().trim().max(20).optional(),
+  pageUrl: z.string().trim().max(2048).optional(),
+  website: z.string().trim().max(200).optional(),
+});
+
 export function createSchemaRoutes(service: SchemaService): HttpRouteDefinition[] {
   return [
     protectedRoute("GET", "/api/v1/admin/schemas", "List schemas available to the data model builder", "schema.builder.read", async () => ({
@@ -234,10 +245,55 @@ export function createSchemaRoutes(service: SchemaService): HttpRouteDefinition[
       return { body: { navigation: record ? await resolveNavigation(service, record) : { header: [], footer: [] } } };
     }, { response: { 200: navigationEnvelopeJsonSchema } }),
 
+    publicFormRoute("POST", "/api/v1/forms/contact", "Submit the public contact form", async (context) => {
+      const body = parseInput(contactFormSubmissionSchema, context.body);
+
+      // Honeypot: bots can submit successfully without creating an inbox record.
+      if (body.website) return { statusCode: 202, body: { submitted: true } };
+
+      const values: Record<string, unknown> = {
+        name: body.name,
+        email: body.email,
+        message: body.message,
+        ...(body.phone ? { phone: body.phone } : {}),
+        ...(body.subject ? { subject: body.subject } : {}),
+        ...(body.locale ? { locale: body.locale } : {}),
+        ...(body.pageUrl ? { pageUrl: body.pageUrl } : {}),
+      };
+
+      await service.createRecord(
+        "contact-submission",
+        { status: "DRAFT", values },
+        null,
+        publicActionMetadata(context),
+      );
+      return { statusCode: 201, body: { submitted: true } };
+    }, {
+      body: contactFormSubmissionJsonSchema,
+      response: { 201: formSubmissionResultJsonSchema, 202: formSubmissionResultJsonSchema },
+    }),
+
     publicRoute("GET", "/api/v1/site/settings", "Read public site settings", async () => {
       const page = await service.listRecords("site-settings", { page: 1, pageSize: 1, status: "ACTIVE" }, true);
       return { body: { settings: page.items[0] ? publicRecord(page.items[0]) : null } };
     }, { response: { 200: siteSettingsEnvelopeJsonSchema } }),
+
+    publicSeoRoute("GET", "/api/v1/seo/config", "Read public SEO defaults", async () => {
+      const page = await service.listRecords("site-settings", { page: 1, pageSize: 1, status: "ACTIVE" }, true);
+      return { body: { seo: buildSeoConfig(page.items[0] ?? null) } };
+    }, { response: { 200: seoConfigEnvelopeJsonSchema } }),
+
+    publicSeoRoute("GET", "/api/v1/seo/sitemap", "List public sitemap entries", async () => {
+      const settingsPage = await service.listRecords("site-settings", { page: 1, pageSize: 1, status: "ACTIVE" }, true);
+      const seo = buildSeoConfig(settingsPage.items[0] ?? null);
+      if (!seo.indexingAllowed) return { body: { entries: [] } };
+
+      const [pages, posts] = await Promise.all([
+        listAllActivePublicRecords(service, "site-page"),
+        listAllActivePublicRecords(service, "blog-post"),
+      ]);
+      return { body: { entries: buildSitemapEntries(pages, posts, seo.defaultLocale) } };
+    }, { response: { 200: seoSitemapJsonSchema } }),
 
     publicRoute("GET", "/api/v1/data/:schemaKey", "List active records from a public dynamic collection", async (context) => {
       const params = parseInput(schemaKeyParamsSchema, context.params);
@@ -259,6 +315,13 @@ function publicRoute(method: HttpRouteDefinition["method"], path: string, summar
 }
 function publicContentRoute(method: HttpRouteDefinition["method"], path: string, summary: string, handler: HttpRouteDefinition["handler"], schema?: Record<string, unknown>): HttpRouteDefinition {
   return { method, path, summary, tags: ["Corporate CMS"], public: true, ...(schema === undefined ? {} : { schema }), handler };
+}
+function publicFormRoute(method: HttpRouteDefinition["method"], path: string, summary: string, handler: HttpRouteDefinition["handler"], schema?: Record<string, unknown>): HttpRouteDefinition {
+  return { method, path, summary, tags: ["Forms"], public: true, ...(schema === undefined ? {} : { schema }), handler };
+}
+
+function publicSeoRoute(method: HttpRouteDefinition["method"], path: string, summary: string, handler: HttpRouteDefinition["handler"], schema?: Record<string, unknown>): HttpRouteDefinition {
+  return { method, path, summary, tags: ["SEO"], public: true, ...(schema === undefined ? {} : { schema }), handler };
 }
 
 
@@ -320,6 +383,101 @@ async function resolveNavigationItems(service: SchemaService, value: unknown): P
   return resolved.filter((item): item is PublicNavigationItem => item !== null);
 }
 
+interface PublicSeoConfig {
+  siteUrl: string | null;
+  siteName: string | null;
+  defaultTitle: string | null;
+  defaultDescription: string | null;
+  defaultImageId: string | null;
+  defaultLocale: string;
+  indexingAllowed: boolean;
+}
+
+interface PublicSeoSitemapEntry {
+  path: string;
+  kind: "PAGE" | "BLOG_POST";
+  slug: string;
+  locale: string;
+  lastModified: string;
+}
+
+function buildSeoConfig(settings: DataRecord | null): PublicSeoConfig {
+  const values = settings?.values ?? {};
+  const siteName = nullableStringRecordValue(values.siteName);
+  return {
+    siteUrl: normalizeSiteUrl(values.siteUrl),
+    siteName,
+    defaultTitle: nullableStringRecordValue(values.seoTitle) ?? siteName,
+    defaultDescription: nullableStringRecordValue(values.seoDescription) ?? nullableStringRecordValue(values.description),
+    defaultImageId: nullableStringRecordValue(values.seoImage),
+    defaultLocale: nullableStringRecordValue(values.defaultLocale) ?? "en",
+    indexingAllowed: settings !== null && values.allowSearchIndexing !== false,
+  };
+}
+
+async function listAllActivePublicRecords(service: SchemaService, schemaKey: string): Promise<DataRecord[]> {
+  const items: DataRecord[] = [];
+  let pageNumber = 1;
+  while (true) {
+    const page = await service.listRecords(schemaKey, { page: pageNumber, pageSize: 100, status: "ACTIVE" }, true);
+    items.push(...page.items);
+    if (pageNumber >= page.pageCount) return items;
+    pageNumber += 1;
+  }
+}
+
+function buildSitemapEntries(pages: DataRecord[], posts: DataRecord[], defaultLocale: string): PublicSeoSitemapEntry[] {
+  const entries: PublicSeoSitemapEntry[] = [];
+  for (const page of pages) {
+    if (page.values.noIndex === true) continue;
+    const slug = stringRecordValue(page.values.slug);
+    if (!slug) continue;
+    entries.push({
+      path: slug === "home" ? "/" : `/${slug.replace(/^\/+/, "")}`,
+      kind: "PAGE",
+      slug,
+      locale: nullableStringRecordValue(page.values.locale) ?? defaultLocale,
+      lastModified: isoRecordDate(page.updatedAt),
+    });
+  }
+  for (const post of posts) {
+    if (post.values.noIndex === true) continue;
+    const slug = stringRecordValue(post.values.slug);
+    if (!slug) continue;
+    entries.push({
+      path: `/blog/${slug.replace(/^\/+/, "")}`,
+      kind: "BLOG_POST",
+      slug,
+      locale: nullableStringRecordValue(post.values.locale) ?? defaultLocale,
+      lastModified: isoRecordDate(post.updatedAt),
+    });
+  }
+  return entries.sort((left, right) => left.path.localeCompare(right.path));
+}
+
+function normalizeSiteUrl(value: unknown): string | null {
+  const raw = nullableStringRecordValue(value);
+  if (!raw) return null;
+  try {
+    const url = new URL(raw);
+    if (url.protocol !== "http:" && url.protocol !== "https:") return null;
+    return raw.replace(/\/+$/, "");
+  } catch {
+    return null;
+  }
+}
+
+function nullableStringRecordValue(value: unknown): string | null {
+  const result = stringRecordValue(value);
+  return result || null;
+}
+
+function isoRecordDate(value: unknown): string {
+  if (value instanceof Date) return value.toISOString();
+  const parsed = typeof value === "string" ? new Date(value) : null;
+  return parsed && !Number.isNaN(parsed.getTime()) ? parsed.toISOString() : new Date(0).toISOString();
+}
+
 function objectRecord(value: unknown): Record<string, unknown> | null {
   return value !== null && typeof value === "object" && !Array.isArray(value)
     ? value as Record<string, unknown>
@@ -330,6 +488,15 @@ function stringRecordValue(value: unknown): string {
   return typeof value === "string" ? value.trim() : "";
 }
 
+function publicActionMetadata(context: HttpRequestContext) {
+  const userAgent = readHeader(context, "user-agent");
+  return {
+    actorUserId: null,
+    requestId: context.requestId,
+    ipAddress: context.ip,
+    ...(userAgent === undefined ? {} : { userAgent }),
+  };
+}
 function actionMetadata(context: HttpRequestContext) {
   if (!context.principal) throw new AppError({ code: "IDENTITY_AUTHENTICATION_REQUIRED", message: "Authentication is required", statusCode: 401 });
   const userAgent = readHeader(context, "user-agent");
@@ -374,6 +541,52 @@ const siteSettingsEnvelopeJsonSchema = { type: "object", required: ["settings"],
 const navigationItemJsonSchema = { type: "object", required: ["label", "href", "style", "openInNewTab"], properties: { label: { type: "string" }, href: { type: "string" }, style: { type: "string", enum: ["LINK", "BUTTON"] }, openInNewTab: { type: "boolean" } } };
 const navigationPayloadJsonSchema = { type: "object", required: ["header", "footer"], properties: { header: { type: "array", items: navigationItemJsonSchema }, footer: { type: "array", items: navigationItemJsonSchema } } };
 const navigationEnvelopeJsonSchema = { type: "object", required: ["navigation"], properties: { navigation: navigationPayloadJsonSchema } };
+const seoConfigJsonSchema = {
+  type: "object",
+  required: ["siteUrl", "siteName", "defaultTitle", "defaultDescription", "defaultImageId", "defaultLocale", "indexingAllowed"],
+  properties: {
+    siteUrl: { type: ["string", "null"] },
+    siteName: { type: ["string", "null"] },
+    defaultTitle: { type: ["string", "null"] },
+    defaultDescription: { type: ["string", "null"] },
+    defaultImageId: { type: ["string", "null"] },
+    defaultLocale: { type: "string" },
+    indexingAllowed: { type: "boolean" },
+  },
+};
+const seoConfigEnvelopeJsonSchema = { type: "object", required: ["seo"], properties: { seo: seoConfigJsonSchema } };
+const seoSitemapEntryJsonSchema = {
+  type: "object",
+  required: ["path", "kind", "slug", "locale", "lastModified"],
+  properties: {
+    path: { type: "string" },
+    kind: { type: "string", enum: ["PAGE", "BLOG_POST"] },
+    slug: { type: "string" },
+    locale: { type: "string" },
+    lastModified: { type: "string" },
+  },
+};
+const seoSitemapJsonSchema = { type: "object", required: ["entries"], properties: { entries: { type: "array", items: seoSitemapEntryJsonSchema } } };
+const contactFormSubmissionJsonSchema = {
+  type: "object",
+  required: ["name", "email", "message"],
+  additionalProperties: false,
+  properties: {
+    name: { type: "string", minLength: 1, maxLength: 120 },
+    email: { type: "string", minLength: 3, maxLength: 320, pattern: "^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$" },
+    phone: { type: "string", maxLength: 60 },
+    subject: { type: "string", maxLength: 180 },
+    message: { type: "string", minLength: 2, maxLength: 5000 },
+    locale: { type: "string", maxLength: 20 },
+    pageUrl: { type: "string", maxLength: 2048 },
+    website: { type: "string", maxLength: 200 },
+  },
+};
+const formSubmissionResultJsonSchema = {
+  type: "object",
+  required: ["submitted"],
+  properties: { submitted: { type: "boolean", const: true } },
+};
 const recordPageJsonSchema = { type: "object", required: ["items", "page", "pageSize", "total", "pageCount"], properties: { items: { type: "array", items: recordJsonSchema }, page: { type: "integer" }, pageSize: { type: "integer" }, total: { type: "integer" }, pageCount: { type: "integer" } } };
 const recordListJsonSchema = { type: "object", properties: { page: { type: "integer", minimum: 1 }, pageSize: { type: "integer", minimum: 1, maximum: 100 }, status: { type: "string", enum: ["DRAFT", "ACTIVE", "ARCHIVED"] } } };
 const publicRecordListJsonSchema = { type: "object", properties: { page: { type: "integer", minimum: 1 }, pageSize: { type: "integer", minimum: 1, maximum: 100 } } };

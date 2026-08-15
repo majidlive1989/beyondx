@@ -16,6 +16,8 @@ export interface ThemeDeliveryManifest {
     siteGlobals: boolean;
     corporateContent: boolean;
     navigation: boolean;
+    forms: boolean;
+    seo: boolean;
     publicMedia: boolean;
     catalog: boolean;
     discussions: boolean;
@@ -105,6 +107,8 @@ export interface SiteSettingsValues extends Record<string, unknown> {
   footerText?: string | null;
   copyrightText?: string | null;
   defaultLocale?: string | null;
+  siteUrl?: string | null;
+  allowSearchIndexing?: boolean;
   seoTitle?: string | null;
   seoDescription?: string | null;
   seoImage?: string | null;
@@ -121,6 +125,49 @@ export interface NavigationItem {
 export interface NavigationPayload {
   header: NavigationItem[];
   footer: NavigationItem[];
+}
+
+
+export type PublicFormName = "contact";
+
+export interface ContactFormSubmissionInput {
+  name: string;
+  email: string;
+  phone?: string;
+  subject?: string;
+  message: string;
+  locale?: string;
+  pageUrl?: string;
+  /** Honeypot. Real users should leave this empty. */
+  website?: string;
+}
+
+export interface FormSubmissionResult {
+  submitted: true;
+}
+
+export interface SeoConfig {
+  siteUrl: string | null;
+  siteName: string | null;
+  defaultTitle: string | null;
+  defaultDescription: string | null;
+  defaultImageId: string | null;
+  defaultLocale: string;
+  indexingAllowed: boolean;
+}
+
+export type SeoSitemapEntryKind = "PAGE" | "BLOG_POST";
+
+export interface SeoSitemapEntry {
+  path: string;
+  kind: SeoSitemapEntryKind;
+  slug: string;
+  locale: string;
+  lastModified: string;
+}
+
+export interface SeoSitemapPayload {
+  entries: SeoSitemapEntry[];
 }
 
 export interface CorporatePageValues extends Record<string, unknown> {

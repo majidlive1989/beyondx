@@ -44,11 +44,11 @@ requireText("modules/schema/src/api/routes.ts", ['"/api/v1/pages"', '"/api/v1/pa
 requireText("modules/schema/src/application/schema-service.ts", ["getRecordByStringValue", "SCHEMA_LOOKUP_FIELD_INVALID"]);
 requireText("modules/schema/src/infrastructure/prisma-schema-repository.ts", ["findRecordByStringValue", '"values" ->>']);
 requireText("packages/database/prisma/seed-runner.ts", ['key: "site-page"', 'key: "blog-post"', 'key: "blog-category"', 'key: "blog-tag"', "seedCorporateContent"]);
-requireText("apps/admin/components/admin-shell.tsx", ["corporateNavigation", '"Pages"', '"Blog posts"', '"Blog categories"', '"Blog tags"']);
-requireText("packages/theme-sdk/src/client.ts", ["readonly pages", "readonly blog", '"api/v1/pages"', '"api/v1/blog/posts"']);
+requireText("apps/admin/components/admin-shell.tsx", ["corporateContent", '"Pages"', 'href: "/blog"', 'label: "Blog"']);
+requireText("packages/theme-sdk/src/client.ts", ["readonly pages", "readonly blog", '"/api/v1/pages"', '"/api/v1/blog/posts"']);
 requireText("packages/theme-sdk/src/types.ts", ["CorporatePageValues", "BlogPostValues", "BlogCategoryValues", "BlogTagValues", "corporateContent"]);
 requireText("apps/admin/app/site-settings/page.tsx", ["Site settings", "+ Add social network", "SOCIAL_PLATFORMS", "updateDynamicRecord", "createDynamicRecord"]);
-requireText("apps/admin/components/admin-shell.tsx", ['href: "/site-settings"', 'schema.key !== "site-settings"']);
+requireText("apps/admin/components/admin-shell.tsx", ['href: "/site-settings"', 'reservedCorporateKeys']);
 requireText("packages/database/prisma/seed-runner.ts", ['key: "platform"', 'type: "ENUM"', '"INSTAGRAM"', '"WHATSAPP"', '"CUSTOM"']);
 requireText("packages/theme-sdk/src/types.ts", ["SiteSocialPlatform", "platform?: SiteSocialPlatform"]);
 
@@ -76,11 +76,32 @@ requireText("packages/theme-sdk/src/client.ts", ["readonly navigation", '"/api/v
 requireText("packages/theme-sdk/src/types.ts", ["NavigationPayload", "NavigationItem", "navigation"]);
 requireText("modules/theme/src/api/routes.ts", ["navigation: true", 'navigation: "/api/v1/navigation"']);
 
+
+requireText("packages/database/prisma/seed-runner.ts", ["seedContactForms", 'key: "contact-submission"', 'publicRead: false', 'label: "Message"']);
+requireText("packages/database/tests/seed.test.ts", ["contact-submission", "state.fields.size"]);
+requireText("modules/schema/src/api/routes.ts", ['"/api/v1/forms/contact"', "contactFormSubmissionSchema", "publicFormRoute", "publicActionMetadata", "website"]);
+requireText("modules/schema/tests/contact-form-route.test.ts", ["Public contact form delivery", '"contact-submission"', "honeypot"]);
+requireText("apps/admin/app/contact-submissions/page.tsx", ["Contact inbox", "Mark unread", "Reply by email", '"contact-submission"']);
+requireText("apps/admin/components/admin-shell.tsx", ['label: "Messages"', 'href: "/contact-submissions"', '"contact-submission"']);
+requireText("packages/theme-sdk/src/client.ts", ["readonly forms", '"/api/v1/forms/contact"', 'form !== "contact"']);
+requireText("packages/theme-sdk/src/types.ts", ["ContactFormSubmissionInput", "FormSubmissionResult", "PublicFormName", "forms"]);
+requireText("packages/theme-sdk/tests/client.test.ts", ["submits the contact form through the stable forms API", "/api/v1/forms/contact"]);
+requireText("modules/theme/src/api/routes.ts", ["forms: true", 'contactForm: "/api/v1/forms/contact"']);
+
+requireText("packages/database/prisma/seed-runner.ts", ['key: "siteUrl"', 'key: "allowSearchIndexing"', 'label: "Allow search indexing"']);
+requireText("apps/admin/app/site-settings/page.tsx", ["Website URL", "Allow search engines to index this website", "allowSearchIndexing"]);
+requireText("modules/schema/src/api/routes.ts", ['"/api/v1/seo/config"', '"/api/v1/seo/sitemap"', "buildSeoConfig", "buildSitemapEntries", "publicSeoRoute"]);
+requireText("modules/schema/tests/seo-route.test.ts", ["Public SEO delivery", "noIndex", '"BLOG_POST"']);
+requireText("packages/theme-sdk/src/client.ts", ["readonly seo", '"/api/v1/seo/config"', '"/api/v1/seo/sitemap"']);
+requireText("packages/theme-sdk/src/types.ts", ["SeoConfig", "SeoSitemapEntry", "SeoSitemapPayload", "allowSearchIndexing", "seo: boolean"]);
+requireText("packages/theme-sdk/tests/client.test.ts", ["reads SEO defaults and sitemap entries", "/api/v1/seo/sitemap"]);
+requireText("modules/theme/src/api/routes.ts", ["seo: true", 'seoConfig: "/api/v1/seo/config"', 'seoSitemap: "/api/v1/seo/sitemap"']);
+
 requireText("package.json", ["verify:phase5"]);
 
 if (failures.length > 0) {
-  console.error("Phase 5C.3 verification failed:\n- " + failures.join("\n- "));
+  console.error("Phase 5C.5 verification failed:\n- " + failures.join("\n- "));
   process.exit(1);
 }
 
-console.log("Phase 5C.3 Navigation structure verified successfully.");
+console.log("Phase 5C.5 SEO + Public Delivery structure verified successfully.");

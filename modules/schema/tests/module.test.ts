@@ -38,6 +38,9 @@ describe("SchemaModule", () => {
     expect(routes.list().some((route) => route.path === "/api/v1/blog/posts/:slug" && route.public)).toBe(true);
     expect(routes.list().some((route) => route.path === "/api/v1/blog/categories" && route.public)).toBe(true);
     expect(routes.list().some((route) => route.path === "/api/v1/navigation" && route.public)).toBe(true);
+    expect(routes.list().some((route) => route.method === "POST" && route.path === "/api/v1/forms/contact" && route.public)).toBe(true);
+    expect(routes.list().some((route) => route.path === "/api/v1/seo/config" && route.public)).toBe(true);
+    expect(routes.list().some((route) => route.path === "/api/v1/seo/sitemap" && route.public)).toBe(true);
     expect(permissions.has("schema.builder.manage")).toBe(true);
     expect((await health.runAll()).find((check) => check.id === "module.schema")?.status).toBe("healthy");
   });

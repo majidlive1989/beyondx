@@ -10,6 +10,8 @@ export interface ThemeDeliveryManifest {
     siteGlobals: true;
     corporateContent: true;
     navigation: true;
+    forms: true;
+    seo: true;
     publicMedia: true;
     catalog: boolean;
     discussions: boolean;
@@ -22,6 +24,9 @@ export interface ThemeDeliveryManifest {
     dynamicRecord: "/api/v1/data/:schemaKey/:id";
     siteSettings: "/api/v1/site/settings";
     navigation: "/api/v1/navigation";
+    contactForm: "/api/v1/forms/contact";
+    seoConfig: "/api/v1/seo/config";
+    seoSitemap: "/api/v1/seo/sitemap";
     pages: "/api/v1/pages";
     page: "/api/v1/pages/:slug";
     blogPosts: "/api/v1/blog/posts";
@@ -70,6 +75,8 @@ export function buildThemeDeliveryManifest(options: ThemeRouteOptions): ThemeDel
       siteGlobals: true,
       corporateContent: true,
       navigation: true,
+      forms: true,
+      seo: true,
       publicMedia: true,
       catalog,
       discussions,
@@ -82,6 +89,9 @@ export function buildThemeDeliveryManifest(options: ThemeRouteOptions): ThemeDel
       dynamicRecord: "/api/v1/data/:schemaKey/:id",
       siteSettings: "/api/v1/site/settings",
       navigation: "/api/v1/navigation",
+      contactForm: "/api/v1/forms/contact",
+      seoConfig: "/api/v1/seo/config",
+      seoSitemap: "/api/v1/seo/sitemap",
       pages: "/api/v1/pages",
       page: "/api/v1/pages/:slug",
       blogPosts: "/api/v1/blog/posts",
@@ -108,13 +118,15 @@ const manifestJsonSchema = {
     sdkPackage: { type: "string", const: "@beyondx/theme-sdk" },
     capabilities: {
       type: "object",
-      required: ["content", "dynamicData", "siteGlobals", "corporateContent", "navigation", "publicMedia", "catalog", "discussions", "commerce"],
+      required: ["content", "dynamicData", "siteGlobals", "corporateContent", "navigation", "forms", "seo", "publicMedia", "catalog", "discussions", "commerce"],
       properties: {
         content: { type: "boolean" },
         dynamicData: { type: "boolean" },
         siteGlobals: { type: "boolean" },
         corporateContent: { type: "boolean" },
         navigation: { type: "boolean" },
+        forms: { type: "boolean" },
+        seo: { type: "boolean" },
         publicMedia: { type: "boolean" },
         catalog: { type: "boolean" },
         discussions: { type: "boolean" },
@@ -123,7 +135,7 @@ const manifestJsonSchema = {
     },
     endpoints: {
       type: "object",
-      required: ["content", "contentEntry", "dynamicData", "dynamicRecord", "siteSettings", "navigation", "pages", "page", "blogPosts", "blogPost", "blogCategories", "blogTags", "media", "mediaContent", "catalogProducts", "catalogProduct", "discussions", "submitDiscussion"],
+      required: ["content", "contentEntry", "dynamicData", "dynamicRecord", "siteSettings", "navigation", "contactForm", "seoConfig", "seoSitemap", "pages", "page", "blogPosts", "blogPost", "blogCategories", "blogTags", "media", "mediaContent", "catalogProducts", "catalogProduct", "discussions", "submitDiscussion"],
       properties: {
         content: { type: "string", const: "/api/v1/content/:apiId" },
         contentEntry: { type: "string", const: "/api/v1/content/:apiId/:slug" },
@@ -131,6 +143,9 @@ const manifestJsonSchema = {
         dynamicRecord: { type: "string", const: "/api/v1/data/:schemaKey/:id" },
         siteSettings: { type: "string", const: "/api/v1/site/settings" },
         navigation: { type: "string", const: "/api/v1/navigation" },
+        contactForm: { type: "string", const: "/api/v1/forms/contact" },
+        seoConfig: { type: "string", const: "/api/v1/seo/config" },
+        seoSitemap: { type: "string", const: "/api/v1/seo/sitemap" },
         pages: { type: "string", const: "/api/v1/pages" },
         page: { type: "string", const: "/api/v1/pages/:slug" },
         blogPosts: { type: "string", const: "/api/v1/blog/posts" },

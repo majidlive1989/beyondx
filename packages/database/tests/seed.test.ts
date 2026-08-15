@@ -140,8 +140,8 @@ describe("BeyondX database seed", () => {
 
     expect(state.modules.size).toBe(9);
     expect(state.permissions.size).toBe(37);
-    expect(state.schemas).toEqual(new Set(["site-social-link", "site-settings", "blog-category", "blog-tag", "site-page", "blog-post", "site-navigation-item", "site-navigation"]));
-    expect(state.fields.size).toBe(64);
+    expect(state.schemas).toEqual(new Set(["site-social-link", "site-settings", "blog-category", "blog-tag", "site-page", "blog-post", "site-navigation-item", "site-navigation", "contact-submission"]));
+    expect(state.fields.size).toBe(73);
     expect(state.roles.size).toBe(3);
     expect(state.users.size).toBe(1);
     expect(state.userRoles.size).toBe(1);

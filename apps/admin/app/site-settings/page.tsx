@@ -47,6 +47,8 @@ interface SiteSettingsEditor {
   footerText: string;
   copyrightText: string;
   defaultLocale: string;
+  siteUrl: string;
+  allowSearchIndexing: boolean;
   seoTitle: string;
   seoDescription: string;
   seoImage: string;
@@ -66,6 +68,8 @@ const EMPTY_SETTINGS: SiteSettingsEditor = {
   footerText: "",
   copyrightText: "",
   defaultLocale: "en",
+  siteUrl: "",
+  allowSearchIndexing: true,
   seoTitle: "",
   seoDescription: "",
   seoImage: "",
@@ -175,6 +179,8 @@ export default function SiteSettingsPage() {
         footerText: clean(values.footerText),
         copyrightText: clean(values.copyrightText),
         defaultLocale: clean(values.defaultLocale) || "en",
+        siteUrl: clean(values.siteUrl),
+        allowSearchIndexing: values.allowSearchIndexing,
         seoTitle: clean(values.seoTitle),
         seoDescription: clean(values.seoDescription),
         seoImage: clean(values.seoImage),
@@ -285,13 +291,19 @@ export default function SiteSettingsPage() {
           </div>
         </SettingsSection>
 
-        <SettingsSection eyebrow="SEO" title="Default SEO">
+        <SettingsSection eyebrow="SEO" title="Search & sharing defaults">
           <div className="form-grid">
+            <TextField label="Website URL" type="url" value={values.siteUrl} onChange={(value) => setField("siteUrl", value)} />
             <TextField label="Default locale" value={values.defaultLocale} onChange={(value) => setField("defaultLocale", value)} />
             <TextField label="Default SEO title" value={values.seoTitle} onChange={(value) => setField("seoTitle", value)} />
             <label className="full">Default SEO description<textarea value={values.seoDescription} onChange={(event) => setField("seoDescription", event.target.value)} /></label>
             <MediaSelect label="Default social / OG image" value={values.seoImage} assets={publicImages} onChange={(value) => setField("seoImage", value)} />
+            <label className="checkbox-label full">
+              <input type="checkbox" checked={values.allowSearchIndexing} onChange={(event) => setField("allowSearchIndexing", event.target.checked)} />
+              Allow search engines to index this website
+            </label>
           </div>
+          <p className="settings-help">Website URL is used to build canonical URLs and sitemap entries in the frontend. Disable indexing for staging or private deployments.</p>
         </SettingsSection>
 
         <div className="sticky-actions site-settings-actions">
@@ -360,6 +372,8 @@ function toEditorValues(raw: Record<string, unknown>): SiteSettingsEditor {
     footerText: asString(raw.footerText),
     copyrightText: asString(raw.copyrightText),
     defaultLocale: asString(raw.defaultLocale) || "en",
+    siteUrl: asString(raw.siteUrl),
+    allowSearchIndexing: raw.allowSearchIndexing !== false,
     seoTitle: asString(raw.seoTitle),
     seoDescription: asString(raw.seoDescription),
     seoImage: asString(raw.seoImage),

@@ -22,7 +22,7 @@ describe("BeyondX theme SDK", () => {
       platform: "BeyondX",
       apiVersion: "v1",
       sdkPackage: "@beyondx/theme-sdk",
-      capabilities: { content: true, dynamicData: true, siteGlobals: true, corporateContent: true, navigation: true, publicMedia: true, catalog: true, discussions: false, commerce: false },
+      capabilities: { content: true, dynamicData: true, siteGlobals: true, corporateContent: true, navigation: true, forms: true, seo: true, publicMedia: true, catalog: true, discussions: false, commerce: false },
       endpoints: {},
     }));
     const manifest = await createBeyondXThemeClient({ baseUrl: "https://api.example.com", fetch: fetcher }).manifest();
@@ -133,6 +133,63 @@ describe("BeyondX theme SDK", () => {
     expect(requested).toBe("https://api.example.com/api/v1/navigation");
     expect(navigation.header[0]?.href).toBe("/about");
     expect(navigation.footer[0]?.label).toBe("Contact");
+  });
+
+
+  it("submits the contact form through the stable forms API", async () => {
+    let requested = "";
+    let method = "";
+    let body = "";
+    const fetcher: BeyondXFetch = (input, init) => {
+      requested = String(input);
+      method = init?.method ?? "";
+      body = typeof init?.body === "string" ? init.body : "";
+      return Promise.resolve(jsonResponse({ submitted: true }, 201));
+    };
+    const client = createBeyondXThemeClient({ baseUrl: "https://api.example.com", fetch: fetcher });
+    const result = await client.forms.submit("contact", {
+      name: "Ali Example",
+      email: "ali@example.com",
+      subject: "Hello",
+      message: "I would like to know more.",
+      pageUrl: "/contact",
+    });
+    expect(requested).toBe("https://api.example.com/api/v1/forms/contact");
+    expect(method).toBe("POST");
+    expect(JSON.parse(body)).toMatchObject({ email: "ali@example.com", message: "I would like to know more." });
+    expect(result.submitted).toBe(true);
+  });
+
+  it("reads SEO defaults and sitemap entries from stable public APIs", async () => {
+    const requested: string[] = [];
+    const fetcher: BeyondXFetch = (input) => {
+      requested.push(String(input));
+      if (String(input).endsWith("/api/v1/seo/config")) {
+        return Promise.resolve(jsonResponse({
+          seo: {
+            siteUrl: "https://example.com",
+            siteName: "Example",
+            defaultTitle: "Example Company",
+            defaultDescription: "Corporate website",
+            defaultImageId: "media-og",
+            defaultLocale: "en",
+            indexingAllowed: true,
+          },
+        }));
+      }
+      return Promise.resolve(jsonResponse({
+        entries: [{ path: "/about", kind: "PAGE", slug: "about", locale: "en", lastModified: "2026-08-15T00:00:00.000Z" }],
+      }));
+    };
+    const client = createBeyondXThemeClient({ baseUrl: "https://api.example.com", fetch: fetcher });
+    const config = await client.seo.getConfig();
+    const sitemap = await client.seo.getSitemap();
+    expect(requested).toEqual([
+      "https://api.example.com/api/v1/seo/config",
+      "https://api.example.com/api/v1/seo/sitemap",
+    ]);
+    expect(config.indexingAllowed).toBe(true);
+    expect(sitemap.entries[0]?.path).toBe("/about");
   });
 
   it("builds public media URLs and reads media metadata", async () => {

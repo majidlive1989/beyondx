@@ -126,6 +126,7 @@ export async function seedDatabase(
   await seedSiteGlobals(prisma);
   await seedCorporateContent(prisma);
   await seedSiteNavigation(prisma);
+  await seedContactForms(prisma);
 
   for (const [id, description] of IDENTITY_SEED_PERMISSIONS) {
     await prisma.permission.upsert({
@@ -334,9 +335,11 @@ async function seedSiteGlobals(prisma: PrismaClient): Promise<void> {
     { key: "footerText", label: "Footer text", type: "TEXT", position: 110 },
     { key: "copyrightText", label: "Copyright text", type: "TEXT", position: 120 },
     { key: "defaultLocale", label: "Default locale", type: "TEXT", position: 130 },
-    { key: "seoTitle", label: "Default SEO title", type: "TEXT", position: 140 },
-    { key: "seoDescription", label: "Default SEO description", type: "LONG_TEXT", position: 150 },
-    { key: "seoImage", label: "Default social image", type: "MEDIA", position: 160 },
+    { key: "siteUrl", label: "Website URL", type: "TEXT", position: 140 },
+    { key: "allowSearchIndexing", label: "Allow search indexing", type: "BOOLEAN", position: 150 },
+    { key: "seoTitle", label: "Default SEO title", type: "TEXT", position: 160 },
+    { key: "seoDescription", label: "Default SEO description", type: "LONG_TEXT", position: 170 },
+    { key: "seoImage", label: "Default social image", type: "MEDIA", position: 180 },
   ] as const;
 
   for (const field of fields) await upsertSeedField(prisma, settings.id, field);
@@ -561,6 +564,41 @@ async function seedSiteNavigation(prisma: PrismaClient): Promise<void> {
   });
 }
 
+
+async function seedContactForms(prisma: PrismaClient): Promise<void> {
+  const submission = await prisma.dataSchema.upsert({
+    where: { key: "contact-submission" },
+    update: {
+      displayName: "Contact submission",
+      pluralName: "Contact submissions",
+      description: "Private inbox records submitted from the public contact form",
+      kind: "COLLECTION",
+      publicRead: false,
+      system: true,
+    },
+    create: {
+      key: "contact-submission",
+      displayName: "Contact submission",
+      pluralName: "Contact submissions",
+      description: "Private inbox records submitted from the public contact form",
+      kind: "COLLECTION",
+      publicRead: false,
+      system: true,
+    },
+  });
+
+  const fields: readonly SeedFieldInput[] = [
+    { key: "name", label: "Name", type: "TEXT", required: true, position: 10, validation: { minLength: 1, maxLength: 120 } },
+    { key: "email", label: "Email", type: "TEXT", required: true, position: 20, validation: { minLength: 3, maxLength: 320, pattern: "^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$" } },
+    { key: "phone", label: "Phone", type: "TEXT", position: 30, validation: { maxLength: 60 } },
+    { key: "subject", label: "Subject", type: "TEXT", position: 40, validation: { maxLength: 180 } },
+    { key: "message", label: "Message", type: "LONG_TEXT", required: true, position: 50, validation: { minLength: 2, maxLength: 5000 } },
+    { key: "locale", label: "Locale", type: "TEXT", position: 60, validation: { maxLength: 20 } },
+    { key: "pageUrl", label: "Source page", type: "TEXT", position: 70, validation: { maxLength: 2048 } },
+  ];
+  for (const field of fields) await upsertSeedField(prisma, submission.id, field);
+}
+
 interface SeedFieldInput {
   key: string;
   label: string;
@@ -568,6 +606,7 @@ interface SeedFieldInput {
   required?: boolean;
   repeatable?: boolean;
   position: number;
+  validation?: Prisma.InputJsonValue;
   settings?: Prisma.InputJsonValue;
   relationTargetSchemaId?: string;
 }
@@ -579,6 +618,7 @@ async function upsertSeedField(prisma: PrismaClient, schemaId: string, field: Se
     required: field.required ?? false,
     repeatable: field.repeatable ?? false,
     position: field.position,
+    ...(field.validation === undefined ? {} : { validation: field.validation }),
     ...(field.settings === undefined ? {} : { settings: field.settings }),
     ...(field.relationTargetSchemaId === undefined ? {} : { relationTargetSchemaId: field.relationTargetSchemaId }),
   };

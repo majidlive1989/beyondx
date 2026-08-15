@@ -130,7 +130,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
 
     const siteSettingsSchema = contentSchemas.find((schema) => schema.key === "site-settings") ?? null;
     const corporateSchemas = new Map(contentSchemas.map((schema) => [schema.key, schema]));
-    const reservedCorporateKeys = new Set(["site-settings", "site-page", "blog-post", "blog-category", "blog-tag", "site-navigation"]);
+    const reservedCorporateKeys = new Set(["site-settings", "site-page", "blog-post", "blog-category", "blog-tag", "site-navigation", "contact-submission"]);
     const corporateContent: NavItem[] = [
       ...(corporateSchemas.has("site-page")
         ? [{ href: "/data/site-page", label: "Pages", permission: "schema.records.read" }]
@@ -142,6 +142,9 @@ export function AdminShell({ children }: { children: ReactNode }) {
         ? [{ href: "/navigation", label: "Navigation", permission: "schema.records.read" }]
         : []),
     ];
+    const messageItems: NavItem[] = corporateSchemas.has("contact-submission")
+      ? [{ href: "/contact-submissions", label: "Contact inbox", permission: "schema.records.read" }]
+      : [];
     const generatedContent: NavItem[] = contentSchemas
       .filter((schema) => !reservedCorporateKeys.has(schema.key))
       .map((schema) => ({
@@ -181,6 +184,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
     const candidateGroups: NavGroup[] = [
       { label: "Overview", items: [{ href: "/dashboard", label: "Dashboard", exact: true }] },
       { label: "Content", items: contentItems },
+      ...(messageItems.length ? [{ label: "Messages", items: messageItems }] : []),
       ...[...pluginGroups.entries()].map(([label, items]) => ({ label, items })),
       { label: "Media", items: [{ href: "/media", label: "Media library", permission: "media.assets.read" }] },
       {

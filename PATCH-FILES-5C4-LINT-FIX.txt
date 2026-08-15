@@ -1,0 +1,3 @@
+PHASE5C4-THEME-SDK-LINT-FIX.md
+PATCH-FILES-5C4-LINT-FIX.txt
+packages/theme-sdk/src/client.ts
