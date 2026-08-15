@@ -239,6 +239,38 @@ export class SchemaService {
     return record;
   }
 
+  async getRecordByStringValue(
+    schemaKey: string,
+    fieldKey: string,
+    value: string,
+    publicOnly = false,
+  ): Promise<DataRecord> {
+    const schema = await this.getSchemaByKey(schemaKey);
+    assertStandaloneRecordsSupported(schema);
+    if (publicOnly && !schema.publicRead) throw notFound("SCHEMA_NOT_PUBLIC", "Schema is not publicly readable");
+
+    const field = schema.fields.find((candidate) => candidate.key === fieldKey);
+    if (!field || !["TEXT", "LONG_TEXT", "RICH_TEXT", "UID", "ENUM"].includes(field.type)) {
+      throw new AppError({
+        code: "SCHEMA_LOOKUP_FIELD_INVALID",
+        message: "Lookup field must be a string-compatible schema field",
+        statusCode: 400,
+        details: { schemaKey: schema.key, fieldKey },
+      });
+    }
+
+    const record = await this.repository.findRecordByStringValue(
+      schema.id,
+      fieldKey,
+      value,
+      publicOnly ? "ACTIVE" : undefined,
+    );
+    if (!record || record.schemaId !== schema.id) {
+      throw notFound("SCHEMA_RECORD_NOT_FOUND", "Record was not found");
+    }
+    return record;
+  }
+
   async createRecord(
     schemaKey: string,
     input: DataRecordCreateInput,

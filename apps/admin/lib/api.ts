@@ -389,6 +389,7 @@ export async function listContentRevisions(id: string): Promise<ContentRevision[
 export function listMedia(input: {
   search?: string;
   kind?: "IMAGE" | "FILE";
+  visibility?: "PUBLIC" | "PRIVATE";
   page?: number;
   pageSize?: number;
 } = {}): Promise<Page<MediaAsset>> {
@@ -398,6 +399,7 @@ export function listMedia(input: {
   });
   if (input.search) query.set("search", input.search);
   if (input.kind) query.set("kind", input.kind);
+  if (input.visibility) query.set("visibility", input.visibility);
   return request<Page<MediaAsset>>(`/api/v1/admin/media?${query}`);
 }
 
@@ -405,11 +407,13 @@ export async function uploadMedia(input: {
   file: File;
   title?: string;
   altText?: string;
+  visibility?: "PUBLIC" | "PRIVATE";
 }): Promise<MediaAsset> {
   const form = new FormData();
   form.set("file", input.file);
   if (input.title) form.set("title", input.title);
   if (input.altText) form.set("altText", input.altText);
+  if (input.visibility) form.set("visibility", input.visibility);
   return (
     await request<{ asset: MediaAsset }>("/api/v1/admin/media", {
       method: "POST",
@@ -430,6 +434,18 @@ export async function updateMedia(
     await request<{ asset: MediaAsset }>(`/api/v1/admin/media/${id}`, {
       method: "PATCH",
       body: JSON.stringify(input),
+    })
+  ).asset;
+}
+
+export async function setMediaVisibility(
+  id: string,
+  visibility: "PUBLIC" | "PRIVATE",
+): Promise<MediaAsset> {
+  return (
+    await request<{ asset: MediaAsset }>(`/api/v1/admin/media/${id}/visibility`, {
+      method: "PATCH",
+      body: JSON.stringify({ visibility }),
     })
   ).asset;
 }
@@ -607,6 +623,14 @@ export function listDynamicRecords(schemaKey: string, input: { page?: number; pa
   const query = new URLSearchParams({ page: String(input.page ?? 1), pageSize: String(input.pageSize ?? 30) });
   if (input.status) query.set("status", input.status);
   return request<Page<DynamicDataRecord>>(`/api/v1/admin/data/${encodeURIComponent(schemaKey)}?${query}`);
+}
+
+export async function getDynamicRecord(schemaKey: string, id: string): Promise<DynamicDataRecord> {
+  return (
+    await request<{ record: DynamicDataRecord }>(
+      `/api/v1/admin/data/${encodeURIComponent(schemaKey)}/${encodeURIComponent(id)}`,
+    )
+  ).record;
 }
 
 export async function createDynamicRecord(schemaKey: string, input: { status?: DataRecordStatus; values: Record<string, unknown> }): Promise<DynamicDataRecord> {

@@ -1,0 +1,14 @@
+PHASE5C1-CORPORATE-SITE-GLOBALS-README.md
+PATCH-FILES-5C1.txt
+modules/theme/module.json
+modules/theme/package.json
+modules/theme/src/api/routes.ts
+modules/theme/src/module.ts
+modules/theme/tests/module.test.ts
+packages/database/prisma/seed-runner.ts
+packages/database/tests/seed.test.ts
+packages/theme-sdk/package.json
+packages/theme-sdk/src/client.ts
+packages/theme-sdk/src/types.ts
+packages/theme-sdk/tests/client.test.ts
+scripts/verify-phase5.mjs

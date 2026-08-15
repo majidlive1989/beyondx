@@ -1,0 +1,9 @@
+PHASE5C1C-SITE-SETTINGS-SCALAR-API-FIX.md
+modules/schema/src/api/routes.ts
+modules/schema/tests/module.test.ts
+modules/theme/src/api/routes.ts
+modules/theme/tests/module.test.ts
+packages/theme-sdk/src/client.ts
+packages/theme-sdk/tests/client.test.ts
+scripts/verify-phase5.mjs
+PATCH-FILES-5C1C.txt

@@ -101,6 +101,7 @@ export interface SchemaRepository {
   recordsExist(schemaId: string, ids: readonly string[]): Promise<boolean>;
   mediaExist(ids: readonly string[]): Promise<boolean>;
   recordValueExists(schemaId: string, fieldKey: string, value: string, excludeRecordId?: string): Promise<boolean>;
+  findRecordByStringValue(schemaId: string, fieldKey: string, value: string, status?: DataRecordStatus): Promise<DataRecord | null>;
 
   getExtension(schemaId: string, targetType: string, targetId: string): Promise<EntityExtension | null>;
   listExtensions(schemaId: string, targetType: string, targetIds: readonly string[]): Promise<EntityExtension[]>;

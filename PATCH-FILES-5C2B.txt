@@ -1,0 +1,10 @@
+PHASE5C2B-EDITORIAL-ADMIN-UX-README.md
+PATCH-FILES-5C2B.txt
+apps/admin/app/blog/page.tsx
+apps/admin/app/blog/new/page.tsx
+apps/admin/app/blog/post/[id]/page.tsx
+apps/admin/components/blog-post-editor.tsx
+apps/admin/components/admin-shell.tsx
+apps/admin/lib/api.ts
+apps/admin/app/globals.css
+scripts/verify-phase5.mjs

@@ -2,7 +2,11 @@ import type {
   BeyondXPage,
   CatalogBrand,
   CatalogCategory,
+  BlogCategoryValues,
+  BlogPostValues,
+  BlogTagValues,
   CatalogProduct,
+  CorporatePageValues,
   ContentEntry,
   DiscussionKind,
   DiscussionSourceType,
@@ -11,6 +15,7 @@ import type {
   DiscussionThread,
   DynamicRecord,
   PublicMediaAsset,
+  SiteSettingsValues,
   ThemeDeliveryManifest,
 } from "./types.js";
 
@@ -64,6 +69,22 @@ export class BeyondXThemeClient {
     get: <TValues extends Record<string, unknown> = Record<string, unknown>>(schemaKey: string, id: string) => Promise<DynamicRecord<TValues>>;
   };
 
+  readonly site: {
+    getSettings: <TValues extends Record<string, unknown> = SiteSettingsValues>() => Promise<DynamicRecord<TValues> | null>;
+  };
+
+  readonly pages: {
+    list: <TValues extends Record<string, unknown> = CorporatePageValues>(options?: PaginationOptions) => Promise<BeyondXPage<DynamicRecord<TValues>>>;
+    get: <TValues extends Record<string, unknown> = CorporatePageValues>(slug: string) => Promise<DynamicRecord<TValues>>;
+  };
+
+  readonly blog: {
+    listPosts: <TValues extends Record<string, unknown> = BlogPostValues>(options?: PaginationOptions) => Promise<BeyondXPage<DynamicRecord<TValues>>>;
+    getPost: <TValues extends Record<string, unknown> = BlogPostValues>(slug: string) => Promise<DynamicRecord<TValues>>;
+    listCategories: <TValues extends Record<string, unknown> = BlogCategoryValues>(options?: PaginationOptions) => Promise<BeyondXPage<DynamicRecord<TValues>>>;
+    listTags: <TValues extends Record<string, unknown> = BlogTagValues>(options?: PaginationOptions) => Promise<BeyondXPage<DynamicRecord<TValues>>>;
+  };
+
   readonly media: {
     get: (id: string) => Promise<PublicMediaAsset>;
     url: (assetOrId: string | { id: string }) => string;
@@ -107,6 +128,35 @@ export class BeyondXThemeClient {
         const response = await this.get<{ record: DynamicRecord<TValues> }>(`/api/v1/data/${segment(schemaKey)}/${segment(id)}`);
         return response.record;
       },
+    };
+
+    this.site = {
+      getSettings: async <TValues extends Record<string, unknown> = SiteSettingsValues>() => {
+        const response = await this.get<{ settings: DynamicRecord<TValues> | null }>("/api/v1/site/settings");
+        return response.settings;
+      },
+    };
+
+    this.pages = {
+      list: <TValues extends Record<string, unknown> = CorporatePageValues>(listOptions: PaginationOptions = {}) =>
+        this.get<BeyondXPage<DynamicRecord<TValues>>>("/api/v1/pages", paginationQuery(listOptions)),
+      get: async <TValues extends Record<string, unknown> = CorporatePageValues>(slug: string) => {
+        const response = await this.get<{ page: DynamicRecord<TValues> }>(`/api/v1/pages/${segment(slug)}`);
+        return response.page;
+      },
+    };
+
+    this.blog = {
+      listPosts: <TValues extends Record<string, unknown> = BlogPostValues>(listOptions: PaginationOptions = {}) =>
+        this.get<BeyondXPage<DynamicRecord<TValues>>>("/api/v1/blog/posts", paginationQuery(listOptions)),
+      getPost: async <TValues extends Record<string, unknown> = BlogPostValues>(slug: string) => {
+        const response = await this.get<{ post: DynamicRecord<TValues> }>(`/api/v1/blog/posts/${segment(slug)}`);
+        return response.post;
+      },
+      listCategories: <TValues extends Record<string, unknown> = BlogCategoryValues>(listOptions: PaginationOptions = {}) =>
+        this.get<BeyondXPage<DynamicRecord<TValues>>>("/api/v1/blog/categories", paginationQuery(listOptions)),
+      listTags: <TValues extends Record<string, unknown> = BlogTagValues>(listOptions: PaginationOptions = {}) =>
+        this.get<BeyondXPage<DynamicRecord<TValues>>>("/api/v1/blog/tags", paginationQuery(listOptions)),
     };
 
     this.media = {

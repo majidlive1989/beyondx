@@ -22,11 +22,100 @@ describe("BeyondX theme SDK", () => {
       platform: "BeyondX",
       apiVersion: "v1",
       sdkPackage: "@beyondx/theme-sdk",
-      capabilities: { content: true, dynamicData: true, publicMedia: true, catalog: true, discussions: false, commerce: false },
+      capabilities: { content: true, dynamicData: true, siteGlobals: true, corporateContent: true, publicMedia: true, catalog: true, discussions: false, commerce: false },
       endpoints: {},
     }));
     const manifest = await createBeyondXThemeClient({ baseUrl: "https://api.example.com", fetch: fetcher }).manifest();
     expect(manifest.capabilities.catalog).toBe(true);
+  });
+
+  it("reads the conventional public site settings single type", async () => {
+    let requested = "";
+    const fetcher: BeyondXFetch = (input) => {
+      requested = String(input);
+      return Promise.resolve(jsonResponse({
+        settings: {
+          id: "settings-1",
+          schemaId: "schema-site-settings",
+          schemaKey: "site-settings",
+          status: "ACTIVE",
+          values: { siteName: "Example", tagline: "Build anything" },
+          createdById: null,
+          updatedById: null,
+          createdAt: "2026-08-12T00:00:00.000Z",
+          updatedAt: "2026-08-12T00:00:00.000Z",
+        },
+      }));
+    };
+    const settings = await createBeyondXThemeClient({ baseUrl: "https://api.example.com", fetch: fetcher }).site.getSettings();
+    expect(requested).toBe("https://api.example.com/api/v1/site/settings");
+    expect(settings?.values.siteName).toBe("Example");
+  });
+
+  it("reads corporate pages from the explicit public API", async () => {
+    const requested: string[] = [];
+    const fetcher: BeyondXFetch = (input) => {
+      requested.push(String(input));
+      if (String(input).endsWith("/api/v1/pages/about")) {
+        return Promise.resolve(jsonResponse({
+          page: {
+            id: "page-1",
+            schemaId: "site-page-schema",
+            schemaKey: "site-page",
+            status: "ACTIVE",
+            values: { title: "About", slug: "about" },
+            createdById: null,
+            updatedById: null,
+            createdAt: "2026-08-12T00:00:00.000Z",
+            updatedAt: "2026-08-12T00:00:00.000Z",
+          },
+        }));
+      }
+      return Promise.resolve(jsonResponse({ items: [], page: 1, pageSize: 12, total: 0, pageCount: 1 }));
+    };
+    const client = createBeyondXThemeClient({ baseUrl: "https://api.example.com", fetch: fetcher });
+    await client.pages.list({ page: 1, pageSize: 12 });
+    const page = await client.pages.get("about");
+    expect(requested).toEqual([
+      "https://api.example.com/api/v1/pages?page=1&pageSize=12",
+      "https://api.example.com/api/v1/pages/about",
+    ]);
+    expect(page.values.title).toBe("About");
+  });
+
+  it("reads blog posts, categories and tags from explicit public APIs", async () => {
+    const requested: string[] = [];
+    const fetcher: BeyondXFetch = (input) => {
+      requested.push(String(input));
+      if (String(input).endsWith("/api/v1/blog/posts/hello-beyondx")) {
+        return Promise.resolve(jsonResponse({
+          post: {
+            id: "post-1",
+            schemaId: "blog-post-schema",
+            schemaKey: "blog-post",
+            status: "ACTIVE",
+            values: { title: "Hello BeyondX", slug: "hello-beyondx" },
+            createdById: null,
+            updatedById: null,
+            createdAt: "2026-08-12T00:00:00.000Z",
+            updatedAt: "2026-08-12T00:00:00.000Z",
+          },
+        }));
+      }
+      return Promise.resolve(jsonResponse({ items: [], page: 1, pageSize: 30, total: 0, pageCount: 1 }));
+    };
+    const client = createBeyondXThemeClient({ baseUrl: "https://api.example.com", fetch: fetcher });
+    await client.blog.listPosts();
+    const post = await client.blog.getPost("hello-beyondx");
+    await client.blog.listCategories();
+    await client.blog.listTags();
+    expect(requested).toEqual([
+      "https://api.example.com/api/v1/blog/posts",
+      "https://api.example.com/api/v1/blog/posts/hello-beyondx",
+      "https://api.example.com/api/v1/blog/categories",
+      "https://api.example.com/api/v1/blog/tags",
+    ]);
+    expect(post.values.slug).toBe("hello-beyondx");
   });
 
   it("builds public media URLs and reads media metadata", async () => {

@@ -1,5 +1,5 @@
 import { hash } from "bcryptjs";
-import type { PrismaClient } from "@prisma/client";
+import type { Prisma, PrismaClient } from "@prisma/client";
 
 export const PLATFORM_MODULES = Object.freeze([
   "@beyondx/core",
@@ -122,6 +122,9 @@ export async function seedDatabase(
   const catalogPluginInstallation = await prisma.moduleInstallation.findUnique({
     where: { name: "@beyondx/plugin-catalog" },
   });
+
+  await seedSiteGlobals(prisma);
+  await seedCorporateContent(prisma);
 
   for (const [id, description] of IDENTITY_SEED_PERMISSIONS) {
     await prisma.permission.upsert({
@@ -250,6 +253,246 @@ export async function seedDatabase(
     where: { userId_roleId: { userId: adminUser.id, roleId: superAdmin.id } },
     update: {},
     create: { userId: adminUser.id, roleId: superAdmin.id },
+  });
+}
+
+async function seedSiteGlobals(prisma: PrismaClient): Promise<void> {
+  const socialLink = await prisma.dataSchema.upsert({
+    where: { key: "site-social-link" },
+    update: {
+      displayName: "Social link",
+      pluralName: "Social links",
+      description: "Reusable social/contact link used by site globals",
+      kind: "COMPONENT",
+      publicRead: false,
+      system: true,
+    },
+    create: {
+      key: "site-social-link",
+      displayName: "Social link",
+      pluralName: "Social links",
+      description: "Reusable social/contact link used by site globals",
+      kind: "COMPONENT",
+      publicRead: false,
+      system: true,
+    },
+  });
+
+  await upsertSeedField(prisma, socialLink.id, {
+    key: "platform",
+    label: "Platform",
+    type: "ENUM",
+    required: true,
+    position: 10,
+    settings: { options: ["INSTAGRAM", "FACEBOOK", "LINKEDIN", "X", "YOUTUBE", "TELEGRAM", "WHATSAPP", "TIKTOK", "GITHUB", "CUSTOM"] },
+  });
+  await upsertSeedField(prisma, socialLink.id, { key: "label", label: "Label", type: "TEXT", position: 20 });
+  await upsertSeedField(prisma, socialLink.id, { key: "url", label: "URL", type: "TEXT", required: true, position: 30 });
+  await upsertSeedField(prisma, socialLink.id, { key: "icon", label: "Icon key", type: "TEXT", position: 40 });
+  await upsertSeedField(prisma, socialLink.id, { key: "openInNewTab", label: "Open in new tab", type: "BOOLEAN", position: 50 });
+
+  const settings = await prisma.dataSchema.upsert({
+    where: { key: "site-settings" },
+    update: {
+      displayName: "Site settings",
+      pluralName: "Site settings",
+      description: "Public site-wide identity, contact, media, social and SEO settings",
+      kind: "SINGLE",
+      publicRead: true,
+      system: true,
+    },
+    create: {
+      key: "site-settings",
+      displayName: "Site settings",
+      pluralName: "Site settings",
+      description: "Public site-wide identity, contact, media, social and SEO settings",
+      kind: "SINGLE",
+      publicRead: true,
+      system: true,
+    },
+  });
+
+  const fields = [
+    { key: "siteName", label: "Site name", type: "TEXT", required: true, position: 10 },
+    { key: "tagline", label: "Tagline", type: "TEXT", position: 20 },
+    { key: "description", label: "Description", type: "LONG_TEXT", position: 30 },
+    { key: "email", label: "Email", type: "TEXT", position: 40 },
+    { key: "phone", label: "Phone", type: "TEXT", position: 50 },
+    { key: "address", label: "Address", type: "LONG_TEXT", position: 60 },
+    { key: "companyName", label: "Company name", type: "TEXT", position: 70 },
+    { key: "logo", label: "Logo", type: "MEDIA", position: 80 },
+    { key: "favicon", label: "Favicon", type: "MEDIA", position: 90 },
+    {
+      key: "socialLinks",
+      label: "Social links",
+      type: "COMPONENT",
+      repeatable: true,
+      position: 100,
+      settings: { componentSchemaId: socialLink.id },
+    },
+    { key: "footerText", label: "Footer text", type: "TEXT", position: 110 },
+    { key: "copyrightText", label: "Copyright text", type: "TEXT", position: 120 },
+    { key: "defaultLocale", label: "Default locale", type: "TEXT", position: 130 },
+    { key: "seoTitle", label: "Default SEO title", type: "TEXT", position: 140 },
+    { key: "seoDescription", label: "Default SEO description", type: "LONG_TEXT", position: 150 },
+    { key: "seoImage", label: "Default social image", type: "MEDIA", position: 160 },
+  ] as const;
+
+  for (const field of fields) await upsertSeedField(prisma, settings.id, field);
+}
+
+
+async function seedCorporateContent(prisma: PrismaClient): Promise<void> {
+  const category = await prisma.dataSchema.upsert({
+    where: { key: "blog-category" },
+    update: {
+      displayName: "Blog category",
+      pluralName: "Blog categories",
+      description: "Categories used by corporate blog posts",
+      kind: "COLLECTION",
+      publicRead: true,
+      system: true,
+    },
+    create: {
+      key: "blog-category",
+      displayName: "Blog category",
+      pluralName: "Blog categories",
+      description: "Categories used by corporate blog posts",
+      kind: "COLLECTION",
+      publicRead: true,
+      system: true,
+    },
+  });
+  await upsertSeedField(prisma, category.id, { key: "name", label: "Name", type: "TEXT", required: true, position: 10 });
+  await upsertSeedField(prisma, category.id, { key: "slug", label: "Slug", type: "UID", required: true, position: 20, settings: { targetField: "name" } });
+  await upsertSeedField(prisma, category.id, { key: "description", label: "Description", type: "LONG_TEXT", position: 30 });
+
+  const tag = await prisma.dataSchema.upsert({
+    where: { key: "blog-tag" },
+    update: {
+      displayName: "Blog tag",
+      pluralName: "Blog tags",
+      description: "Tags used by corporate blog posts",
+      kind: "COLLECTION",
+      publicRead: true,
+      system: true,
+    },
+    create: {
+      key: "blog-tag",
+      displayName: "Blog tag",
+      pluralName: "Blog tags",
+      description: "Tags used by corporate blog posts",
+      kind: "COLLECTION",
+      publicRead: true,
+      system: true,
+    },
+  });
+  await upsertSeedField(prisma, tag.id, { key: "name", label: "Name", type: "TEXT", required: true, position: 10 });
+  await upsertSeedField(prisma, tag.id, { key: "slug", label: "Slug", type: "UID", required: true, position: 20, settings: { targetField: "name" } });
+
+  const page = await prisma.dataSchema.upsert({
+    where: { key: "site-page" },
+    update: {
+      displayName: "Page",
+      pluralName: "Pages",
+      description: "Public corporate pages such as Home, About, Contact and Services",
+      kind: "COLLECTION",
+      publicRead: true,
+      system: true,
+    },
+    create: {
+      key: "site-page",
+      displayName: "Page",
+      pluralName: "Pages",
+      description: "Public corporate pages such as Home, About, Contact and Services",
+      kind: "COLLECTION",
+      publicRead: true,
+      system: true,
+    },
+  });
+  const pageFields: readonly SeedFieldInput[] = [
+    { key: "title", label: "Title", type: "TEXT", required: true, position: 10 },
+    { key: "slug", label: "Slug", type: "UID", required: true, position: 20, settings: { targetField: "title" } },
+    { key: "excerpt", label: "Excerpt", type: "LONG_TEXT", position: 30 },
+    { key: "content", label: "Content", type: "RICH_TEXT", position: 40 },
+    { key: "featuredImage", label: "Featured image", type: "MEDIA", position: 50 },
+    { key: "template", label: "Template", type: "ENUM", position: 60, settings: { options: ["DEFAULT", "FULL_WIDTH", "LANDING"] } },
+    { key: "sortOrder", label: "Sort order", type: "NUMBER", position: 70 },
+    { key: "locale", label: "Locale", type: "TEXT", position: 80 },
+    { key: "seoTitle", label: "SEO title", type: "TEXT", position: 90 },
+    { key: "seoDescription", label: "SEO description", type: "LONG_TEXT", position: 100 },
+    { key: "ogImage", label: "OG image", type: "MEDIA", position: 110 },
+    { key: "canonicalUrl", label: "Canonical URL", type: "TEXT", position: 120 },
+    { key: "noIndex", label: "No index", type: "BOOLEAN", position: 130 },
+  ];
+  for (const field of pageFields) await upsertSeedField(prisma, page.id, field);
+
+  const post = await prisma.dataSchema.upsert({
+    where: { key: "blog-post" },
+    update: {
+      displayName: "Blog post",
+      pluralName: "Blog posts",
+      description: "Public corporate blog posts",
+      kind: "COLLECTION",
+      publicRead: true,
+      system: true,
+    },
+    create: {
+      key: "blog-post",
+      displayName: "Blog post",
+      pluralName: "Blog posts",
+      description: "Public corporate blog posts",
+      kind: "COLLECTION",
+      publicRead: true,
+      system: true,
+    },
+  });
+  const postFields: readonly SeedFieldInput[] = [
+    { key: "title", label: "Title", type: "TEXT", required: true, position: 10 },
+    { key: "slug", label: "Slug", type: "UID", required: true, position: 20, settings: { targetField: "title" } },
+    { key: "excerpt", label: "Excerpt", type: "LONG_TEXT", position: 30 },
+    { key: "content", label: "Content", type: "RICH_TEXT", position: 40 },
+    { key: "featuredImage", label: "Featured image", type: "MEDIA", position: 50 },
+    { key: "category", label: "Category", type: "RELATION", position: 60, relationTargetSchemaId: category.id },
+    { key: "tags", label: "Tags", type: "RELATION", repeatable: true, position: 70, relationTargetSchemaId: tag.id },
+    { key: "authorName", label: "Author name", type: "TEXT", position: 80 },
+    { key: "publishedAt", label: "Published at", type: "DATE", position: 90 },
+    { key: "locale", label: "Locale", type: "TEXT", position: 100 },
+    { key: "isFeatured", label: "Featured post", type: "BOOLEAN", position: 110 },
+    { key: "seoTitle", label: "SEO title", type: "TEXT", position: 120 },
+    { key: "seoDescription", label: "SEO description", type: "LONG_TEXT", position: 130 },
+    { key: "ogImage", label: "OG image", type: "MEDIA", position: 140 },
+    { key: "canonicalUrl", label: "Canonical URL", type: "TEXT", position: 150 },
+    { key: "noIndex", label: "No index", type: "BOOLEAN", position: 160 },
+  ];
+  for (const field of postFields) await upsertSeedField(prisma, post.id, field);
+}
+
+interface SeedFieldInput {
+  key: string;
+  label: string;
+  type: "TEXT" | "LONG_TEXT" | "RICH_TEXT" | "UID" | "NUMBER" | "BOOLEAN" | "DATE" | "ENUM" | "MEDIA" | "RELATION" | "COMPONENT";
+  required?: boolean;
+  repeatable?: boolean;
+  position: number;
+  settings?: Prisma.InputJsonValue;
+  relationTargetSchemaId?: string;
+}
+
+async function upsertSeedField(prisma: PrismaClient, schemaId: string, field: SeedFieldInput): Promise<void> {
+  const data = {
+    label: field.label,
+    type: field.type,
+    required: field.required ?? false,
+    repeatable: field.repeatable ?? false,
+    position: field.position,
+    ...(field.settings === undefined ? {} : { settings: field.settings }),
+    ...(field.relationTargetSchemaId === undefined ? {} : { relationTargetSchemaId: field.relationTargetSchemaId }),
+  };
+  await prisma.dataField.upsert({
+    where: { schemaId_key: { schemaId, key: field.key } },
+    update: data,
+    create: { schemaId, key: field.key, ...data },
   });
 }
 

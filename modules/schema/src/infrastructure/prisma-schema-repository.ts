@@ -13,6 +13,7 @@ import type {
 import type {
   DataField,
   DataRecord,
+  DataRecordStatus,
   DataSchema,
   EntityExtension,
   Page,
@@ -232,6 +233,34 @@ export class PrismaSchemaRepository implements SchemaRepository {
           ) AS "exists"
         `);
     return rows[0]?.exists ?? false;
+  }
+
+  async findRecordByStringValue(
+    schemaId: string,
+    fieldKey: string,
+    value: string,
+    status?: DataRecordStatus,
+  ): Promise<DataRecord | null> {
+    const rows = status === undefined
+      ? await this.database.$queryRaw<Array<{ id: string }>>(Prisma.sql`
+          SELECT "id"
+          FROM "data_records"
+          WHERE "schemaId" = ${schemaId}
+            AND "values" ->> ${fieldKey} = ${value}
+          ORDER BY "updatedAt" DESC
+          LIMIT 1
+        `)
+      : await this.database.$queryRaw<Array<{ id: string }>>(Prisma.sql`
+          SELECT "id"
+          FROM "data_records"
+          WHERE "schemaId" = ${schemaId}
+            AND "status"::text = ${status}
+            AND "values" ->> ${fieldKey} = ${value}
+          ORDER BY "updatedAt" DESC
+          LIMIT 1
+        `);
+    const id = rows[0]?.id;
+    return id ? this.getRecord(id) : null;
   }
 
   async getExtension(schemaId: string, targetType: string, targetId: string): Promise<EntityExtension | null> {

@@ -13,6 +13,8 @@ export interface ThemeDeliveryManifest {
   capabilities: {
     content: boolean;
     dynamicData: boolean;
+    siteGlobals: boolean;
+    corporateContent: boolean;
     publicMedia: boolean;
     catalog: boolean;
     discussions: boolean;
@@ -66,6 +68,92 @@ export interface ContentEntry<TData extends Record<string, unknown> = Record<str
   archivedAt: string | null;
   createdAt: string;
   updatedAt: string;
+}
+
+export type SiteSocialPlatform =
+  | "INSTAGRAM"
+  | "FACEBOOK"
+  | "LINKEDIN"
+  | "X"
+  | "YOUTUBE"
+  | "TELEGRAM"
+  | "WHATSAPP"
+  | "TIKTOK"
+  | "GITHUB"
+  | "CUSTOM";
+
+export interface SiteSocialLink {
+  platform?: SiteSocialPlatform | null;
+  label?: string | null;
+  url: string;
+  icon?: string | null;
+  openInNewTab?: boolean;
+}
+
+export interface SiteSettingsValues extends Record<string, unknown> {
+  siteName: string;
+  tagline?: string | null;
+  description?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  address?: string | null;
+  companyName?: string | null;
+  logo?: string | null;
+  favicon?: string | null;
+  socialLinks?: SiteSocialLink[];
+  footerText?: string | null;
+  copyrightText?: string | null;
+  defaultLocale?: string | null;
+  seoTitle?: string | null;
+  seoDescription?: string | null;
+  seoImage?: string | null;
+}
+
+
+export interface CorporatePageValues extends Record<string, unknown> {
+  title: string;
+  slug: string;
+  excerpt?: string | null;
+  content?: string | null;
+  featuredImage?: string | null;
+  template?: "DEFAULT" | "FULL_WIDTH" | "LANDING" | null;
+  sortOrder?: number | null;
+  locale?: string | null;
+  seoTitle?: string | null;
+  seoDescription?: string | null;
+  ogImage?: string | null;
+  canonicalUrl?: string | null;
+  noIndex?: boolean;
+}
+
+export interface BlogCategoryValues extends Record<string, unknown> {
+  name: string;
+  slug: string;
+  description?: string | null;
+}
+
+export interface BlogTagValues extends Record<string, unknown> {
+  name: string;
+  slug: string;
+}
+
+export interface BlogPostValues extends Record<string, unknown> {
+  title: string;
+  slug: string;
+  excerpt?: string | null;
+  content?: string | null;
+  featuredImage?: string | null;
+  category?: string | null;
+  tags?: string[];
+  authorName?: string | null;
+  publishedAt?: string | null;
+  locale?: string | null;
+  isFeatured?: boolean;
+  seoTitle?: string | null;
+  seoDescription?: string | null;
+  ogImage?: string | null;
+  canonicalUrl?: string | null;
+  noIndex?: boolean;
 }
 
 export interface DynamicRecord<TValues extends Record<string, unknown> = Record<string, unknown>> {

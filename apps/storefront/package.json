@@ -1,0 +1,25 @@
+{
+  "name": "@beyondx/storefront",
+  "version": "0.6.2",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "next dev -p 3001",
+    "start": "next start -p 3001",
+    "build": "next build",
+    "clean": "rm -rf .next",
+    "lint": "eslint app components lib tests --max-warnings=0",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@beyondx/theme-sdk": "workspace:*",
+    "next": "15.5.2",
+    "react": "19.1.1",
+    "react-dom": "19.1.1"
+  },
+  "devDependencies": {
+    "@types/react": "19.1.12",
+    "@types/react-dom": "19.1.9"
+  }
+}

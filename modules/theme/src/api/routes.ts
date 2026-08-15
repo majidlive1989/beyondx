@@ -7,6 +7,8 @@ export interface ThemeDeliveryManifest {
   capabilities: {
     content: true;
     dynamicData: true;
+    siteGlobals: true;
+    corporateContent: true;
     publicMedia: true;
     catalog: boolean;
     discussions: boolean;
@@ -17,6 +19,13 @@ export interface ThemeDeliveryManifest {
     contentEntry: "/api/v1/content/:apiId/:slug";
     dynamicData: "/api/v1/data/:schemaKey";
     dynamicRecord: "/api/v1/data/:schemaKey/:id";
+    siteSettings: "/api/v1/site/settings";
+    pages: "/api/v1/pages";
+    page: "/api/v1/pages/:slug";
+    blogPosts: "/api/v1/blog/posts";
+    blogPost: "/api/v1/blog/posts/:slug";
+    blogCategories: "/api/v1/blog/categories";
+    blogTags: "/api/v1/blog/tags";
     media: "/api/v1/media/:id";
     mediaContent: "/api/v1/media/:id/content";
     catalogProducts: "/api/v1/catalog/products" | null;
@@ -56,6 +65,8 @@ export function buildThemeDeliveryManifest(options: ThemeRouteOptions): ThemeDel
     capabilities: {
       content: true,
       dynamicData: true,
+      siteGlobals: true,
+      corporateContent: true,
       publicMedia: true,
       catalog,
       discussions,
@@ -66,6 +77,13 @@ export function buildThemeDeliveryManifest(options: ThemeRouteOptions): ThemeDel
       contentEntry: "/api/v1/content/:apiId/:slug",
       dynamicData: "/api/v1/data/:schemaKey",
       dynamicRecord: "/api/v1/data/:schemaKey/:id",
+      siteSettings: "/api/v1/site/settings",
+      pages: "/api/v1/pages",
+      page: "/api/v1/pages/:slug",
+      blogPosts: "/api/v1/blog/posts",
+      blogPost: "/api/v1/blog/posts/:slug",
+      blogCategories: "/api/v1/blog/categories",
+      blogTags: "/api/v1/blog/tags",
       media: "/api/v1/media/:id",
       mediaContent: "/api/v1/media/:id/content",
       catalogProducts: catalog ? "/api/v1/catalog/products" : null,
@@ -86,10 +104,12 @@ const manifestJsonSchema = {
     sdkPackage: { type: "string", const: "@beyondx/theme-sdk" },
     capabilities: {
       type: "object",
-      required: ["content", "dynamicData", "publicMedia", "catalog", "discussions", "commerce"],
+      required: ["content", "dynamicData", "siteGlobals", "corporateContent", "publicMedia", "catalog", "discussions", "commerce"],
       properties: {
         content: { type: "boolean" },
         dynamicData: { type: "boolean" },
+        siteGlobals: { type: "boolean" },
+        corporateContent: { type: "boolean" },
         publicMedia: { type: "boolean" },
         catalog: { type: "boolean" },
         discussions: { type: "boolean" },
@@ -98,12 +118,19 @@ const manifestJsonSchema = {
     },
     endpoints: {
       type: "object",
-      required: ["content", "contentEntry", "dynamicData", "dynamicRecord", "media", "mediaContent", "catalogProducts", "catalogProduct", "discussions", "submitDiscussion"],
+      required: ["content", "contentEntry", "dynamicData", "dynamicRecord", "siteSettings", "pages", "page", "blogPosts", "blogPost", "blogCategories", "blogTags", "media", "mediaContent", "catalogProducts", "catalogProduct", "discussions", "submitDiscussion"],
       properties: {
         content: { type: "string", const: "/api/v1/content/:apiId" },
         contentEntry: { type: "string", const: "/api/v1/content/:apiId/:slug" },
         dynamicData: { type: "string", const: "/api/v1/data/:schemaKey" },
         dynamicRecord: { type: "string", const: "/api/v1/data/:schemaKey/:id" },
+        siteSettings: { type: "string", const: "/api/v1/site/settings" },
+        pages: { type: "string", const: "/api/v1/pages" },
+        page: { type: "string", const: "/api/v1/pages/:slug" },
+        blogPosts: { type: "string", const: "/api/v1/blog/posts" },
+        blogPost: { type: "string", const: "/api/v1/blog/posts/:slug" },
+        blogCategories: { type: "string", const: "/api/v1/blog/categories" },
+        blogTags: { type: "string", const: "/api/v1/blog/tags" },
         media: { type: "string", const: "/api/v1/media/:id" },
         mediaContent: { type: "string", const: "/api/v1/media/:id/content" },
         catalogProducts: nullableString("/api/v1/catalog/products"),

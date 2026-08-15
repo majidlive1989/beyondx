@@ -128,11 +128,24 @@ export function AdminShell({ children }: { children: ReactNode }) {
       permission: "content.entries.read",
     }));
 
-    const generatedContent: NavItem[] = contentSchemas.map((schema) => ({
-      href: `/data/${encodeURIComponent(schema.key)}`,
-      label: displayNavLabel(schema.kind === "SINGLE" ? schema.displayName : schema.pluralName),
-      permission: "schema.records.read",
-    }));
+    const siteSettingsSchema = contentSchemas.find((schema) => schema.key === "site-settings") ?? null;
+    const corporateSchemas = new Map(contentSchemas.map((schema) => [schema.key, schema]));
+    const reservedCorporateKeys = new Set(["site-settings", "site-page", "blog-post", "blog-category", "blog-tag"]);
+    const corporateContent: NavItem[] = [
+      ...(corporateSchemas.has("site-page")
+        ? [{ href: "/data/site-page", label: "Pages", permission: "schema.records.read" }]
+        : []),
+      ...(corporateSchemas.has("blog-post")
+        ? [{ href: "/blog", label: "Blog", permission: "schema.records.read" }]
+        : []),
+    ];
+    const generatedContent: NavItem[] = contentSchemas
+      .filter((schema) => !reservedCorporateKeys.has(schema.key))
+      .map((schema) => ({
+        href: `/data/${encodeURIComponent(schema.key)}`,
+        label: displayNavLabel(schema.kind === "SINGLE" ? schema.displayName : schema.pluralName),
+        permission: "schema.records.read",
+      }));
 
     const pluginGroups = new Map<string, NavItem[]>();
     for (const plugin of runtimePlugins) {
@@ -153,6 +166,10 @@ export function AdminShell({ children }: { children: ReactNode }) {
 
     const contentItems: NavItem[] = [
       { href: "/content", label: "Content", exact: true },
+      ...(siteSettingsSchema
+        ? [{ href: "/site-settings", label: "Site settings", permission: "schema.records.read", exact: true }]
+        : []),
+      ...corporateContent,
       ...publishableContent,
       ...generatedContent,
       ...contentPluginItems,

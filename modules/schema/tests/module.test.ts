@@ -33,6 +33,10 @@ describe("SchemaModule", () => {
     expect(routes.list().some((route) => route.path === "/api/v1/admin/schemas")).toBe(true);
     expect(routes.list().some((route) => route.path === "/api/v1/admin/runtime-schemas" && route.permission === "schema.records.read")).toBe(true);
     expect(routes.list().some((route) => route.path === "/api/v1/admin/data/:schemaKey")).toBe(true);
+    expect(routes.list().some((route) => route.path === "/api/v1/site/settings" && route.public)).toBe(true);
+    expect(routes.list().some((route) => route.path === "/api/v1/pages/:slug" && route.public)).toBe(true);
+    expect(routes.list().some((route) => route.path === "/api/v1/blog/posts/:slug" && route.public)).toBe(true);
+    expect(routes.list().some((route) => route.path === "/api/v1/blog/categories" && route.public)).toBe(true);
     expect(permissions.has("schema.builder.manage")).toBe(true);
     expect((await health.runAll()).find((check) => check.id === "module.schema")?.status).toBe("healthy");
   });

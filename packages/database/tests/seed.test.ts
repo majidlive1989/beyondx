@@ -19,6 +19,7 @@ function createSeedClient(): {
     modules: Set<string>;
     permissions: Set<string>;
     schemas: Set<string>;
+    fields: Set<string>;
     roles: Map<string, RoleRecord>;
     users: Map<string, UserRecord>;
     userRoles: Set<string>;
@@ -30,6 +31,7 @@ function createSeedClient(): {
     modules: new Set<string>(),
     permissions: new Set<string>(),
     schemas: new Set<string>(),
+    fields: new Set<string>(),
     roles: new Map<string, RoleRecord>(),
     users: new Map<string, UserRecord>(),
     userRoles: new Set<string>(),
@@ -63,6 +65,12 @@ function createSeedClient(): {
       upsert: (input: { where: { key: string } }) => {
         state.schemas.add(input.where.key);
         return Promise.resolve({ id: input.where.key, key: input.where.key });
+      },
+    },
+    dataField: {
+      upsert: (input: { where: { schemaId_key: { schemaId: string; key: string } } }) => {
+        state.fields.add(`${input.where.schemaId_key.schemaId}:${input.where.schemaId_key.key}`);
+        return Promise.resolve({ id: `${input.where.schemaId_key.schemaId}:${input.where.schemaId_key.key}` });
       },
     },
     role: {
@@ -119,7 +127,7 @@ const environment = {
   PASSWORD_SALT_ROUNDS: "10",
 };
 
-describe("Phase 3 database seed", () => {
+describe("BeyondX database seed", () => {
   it("is idempotent across repeated runs", async () => {
     const { client, state } = createSeedClient();
 
@@ -128,7 +136,8 @@ describe("Phase 3 database seed", () => {
 
     expect(state.modules.size).toBe(9);
     expect(state.permissions.size).toBe(37);
-    expect(state.schemas.size).toBe(0);
+    expect(state.schemas).toEqual(new Set(["site-social-link", "site-settings", "blog-category", "blog-tag", "site-page", "blog-post"]));
+    expect(state.fields.size).toBe(55);
     expect(state.roles.size).toBe(3);
     expect(state.users.size).toBe(1);
     expect(state.userRoles.size).toBe(1);

@@ -1,0 +1,17 @@
+PHASE5C2-CORPORATE-PAGES-BLOG-README.md
+PATCH-FILES-5C2.txt
+apps/admin/components/admin-shell.tsx
+modules/schema/src/application/contracts.ts
+modules/schema/src/application/schema-service.ts
+modules/schema/src/infrastructure/prisma-schema-repository.ts
+modules/schema/src/api/routes.ts
+modules/schema/tests/schema-service.test.ts
+modules/schema/tests/module.test.ts
+modules/theme/src/api/routes.ts
+modules/theme/tests/module.test.ts
+packages/database/prisma/seed-runner.ts
+packages/database/tests/seed.test.ts
+packages/theme-sdk/src/client.ts
+packages/theme-sdk/src/types.ts
+packages/theme-sdk/tests/client.test.ts
+scripts/verify-phase5.mjs

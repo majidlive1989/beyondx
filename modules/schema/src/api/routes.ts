@@ -18,6 +18,8 @@ const schemaKey = z.string().trim().min(2).max(80);
 const idParamsSchema = z.object({ id });
 const schemaKeyParamsSchema = z.object({ schemaKey });
 const recordParamsSchema = z.object({ schemaKey, id });
+const slugValue = z.string().trim().min(1).max(180);
+const slugParamsSchema = z.object({ slug: slugValue });
 const extensionParamsSchema = z.object({ schemaKey, targetType: z.string().trim().min(1).max(80), targetId: id });
 const objectValue = z.record(z.unknown());
 const nullableObject = objectValue.nullable();
@@ -196,6 +198,41 @@ export function createSchemaRoutes(service: SchemaService): HttpRouteDefinition[
       return { body: { extension: publicExtension(await service.upsertExtension(params.schemaKey, params.targetType, params.targetId, body.values, actionMetadata(context))) } };
     }, { params: extensionParamsJsonSchema, body: extensionJsonSchema }),
 
+    publicContentRoute("GET", "/api/v1/pages", "List active corporate pages", async (context) => {
+      const query = parseInput(recordListSchema, { ...(context.query ?? {}), status: "ACTIVE" });
+      return { body: publicPage(await service.listRecords("site-page", query, true)) };
+    }, { querystring: publicRecordListJsonSchema, response: { 200: recordPageJsonSchema } }),
+
+    publicContentRoute("GET", "/api/v1/pages/:slug", "Read an active corporate page by slug", async (context) => {
+      const params = parseInput(slugParamsSchema, context.params);
+      return { body: { page: publicRecord(await service.getRecordByStringValue("site-page", "slug", params.slug, true)) } };
+    }, { params: slugParamsJsonSchema, response: { 200: pageEnvelopeJsonSchema } }),
+
+    publicContentRoute("GET", "/api/v1/blog/posts", "List active blog posts", async (context) => {
+      const query = parseInput(recordListSchema, { ...(context.query ?? {}), status: "ACTIVE" });
+      return { body: publicPage(await service.listRecords("blog-post", query, true)) };
+    }, { querystring: publicRecordListJsonSchema, response: { 200: recordPageJsonSchema } }),
+
+    publicContentRoute("GET", "/api/v1/blog/posts/:slug", "Read an active blog post by slug", async (context) => {
+      const params = parseInput(slugParamsSchema, context.params);
+      return { body: { post: publicRecord(await service.getRecordByStringValue("blog-post", "slug", params.slug, true)) } };
+    }, { params: slugParamsJsonSchema, response: { 200: postEnvelopeJsonSchema } }),
+
+    publicContentRoute("GET", "/api/v1/blog/categories", "List active blog categories", async (context) => {
+      const query = parseInput(recordListSchema, { ...(context.query ?? {}), status: "ACTIVE" });
+      return { body: publicPage(await service.listRecords("blog-category", query, true)) };
+    }, { querystring: publicRecordListJsonSchema, response: { 200: recordPageJsonSchema } }),
+
+    publicContentRoute("GET", "/api/v1/blog/tags", "List active blog tags", async (context) => {
+      const query = parseInput(recordListSchema, { ...(context.query ?? {}), status: "ACTIVE" });
+      return { body: publicPage(await service.listRecords("blog-tag", query, true)) };
+    }, { querystring: publicRecordListJsonSchema, response: { 200: recordPageJsonSchema } }),
+
+    publicRoute("GET", "/api/v1/site/settings", "Read public site settings", async () => {
+      const page = await service.listRecords("site-settings", { page: 1, pageSize: 1, status: "ACTIVE" }, true);
+      return { body: { settings: page.items[0] ? publicRecord(page.items[0]) : null } };
+    }, { response: { 200: siteSettingsEnvelopeJsonSchema } }),
+
     publicRoute("GET", "/api/v1/data/:schemaKey", "List active records from a public dynamic collection", async (context) => {
       const params = parseInput(schemaKeyParamsSchema, context.params);
       const query = parseInput(recordListSchema, { ...(context.query ?? {}), status: "ACTIVE" });
@@ -213,6 +250,9 @@ function protectedRoute(method: HttpRouteDefinition["method"], path: string, sum
 }
 function publicRoute(method: HttpRouteDefinition["method"], path: string, summary: string, handler: HttpRouteDefinition["handler"], schema?: Record<string, unknown>): HttpRouteDefinition {
   return { method, path, summary, tags: ["Dynamic Data"], public: true, ...(schema === undefined ? {} : { schema }), handler };
+}
+function publicContentRoute(method: HttpRouteDefinition["method"], path: string, summary: string, handler: HttpRouteDefinition["handler"], schema?: Record<string, unknown>): HttpRouteDefinition {
+  return { method, path, summary, tags: ["Corporate CMS"], public: true, ...(schema === undefined ? {} : { schema }), handler };
 }
 
 function actionMetadata(context: HttpRequestContext) {
@@ -241,6 +281,7 @@ function publicPage(page: Page<DataRecord>) { return { ...page, items: page.item
 const idParamsJsonSchema = { type: "object", required: ["id"], properties: { id: { type: "string" } } };
 const schemaKeyParamsJsonSchema = { type: "object", required: ["schemaKey"], properties: { schemaKey: { type: "string" } } };
 const recordParamsJsonSchema = { type: "object", required: ["schemaKey", "id"], properties: { schemaKey: { type: "string" }, id: { type: "string" } } };
+const slugParamsJsonSchema = { type: "object", required: ["slug"], properties: { slug: { type: "string", minLength: 1, maxLength: 180 } } };
 const extensionParamsJsonSchema = { type: "object", required: ["schemaKey", "targetType", "targetId"], properties: { schemaKey: { type: "string" }, targetType: { type: "string" }, targetId: { type: "string" } } };
 const fieldJsonSchema = { type: "object", additionalProperties: true, required: ["id", "schemaId", "key", "label", "type", "required", "repeatable", "position", "createdAt", "updatedAt"], properties: { id: { type: "string" }, schemaId: { type: "string" }, key: { type: "string" }, label: { type: "string" }, type: { type: "string" }, required: { type: "boolean" }, repeatable: { type: "boolean" }, position: { type: "integer" }, validation: { type: ["object", "null"] }, settings: { type: ["object", "null"] }, relationTargetSchemaId: { type: ["string", "null"] }, createdAt: { type: "string" }, updatedAt: { type: "string" } } };
 const schemaJsonSchema = { type: "object", additionalProperties: true, required: ["id", "key", "displayName", "pluralName", "kind", "publicRead", "system", "fields", "createdAt", "updatedAt"], properties: { id: { type: "string" }, key: { type: "string" }, displayName: { type: "string" }, pluralName: { type: "string" }, description: { type: ["string", "null"] }, kind: { type: "string" }, publicRead: { type: "boolean" }, system: { type: "boolean" }, fields: { type: "array", items: fieldJsonSchema }, createdAt: { type: "string" }, updatedAt: { type: "string" } } };
@@ -252,6 +293,9 @@ const fieldCreateJsonSchema = { type: "object", required: ["key", "label", "type
 const fieldUpdateJsonSchema = { type: "object", properties: { label: { type: "string" }, required: { type: "boolean" }, repeatable: { type: "boolean" }, position: { type: "integer" }, validation: { type: ["object", "null"] }, settings: { type: ["object", "null"] }, relationTargetSchemaId: { type: ["string", "null"] } } };
 const recordJsonSchema = { type: "object", additionalProperties: true, required: ["id", "schemaId", "schemaKey", "status", "values", "createdAt", "updatedAt"], properties: { id: { type: "string" }, schemaId: { type: "string" }, schemaKey: { type: "string" }, status: { type: "string" }, values: { type: "object", additionalProperties: true }, createdById: { type: ["string", "null"] }, updatedById: { type: ["string", "null"] }, createdAt: { type: "string" }, updatedAt: { type: "string" } } };
 const recordEnvelopeJsonSchema = { type: "object", required: ["record"], properties: { record: recordJsonSchema } };
+const pageEnvelopeJsonSchema = { type: "object", required: ["page"], properties: { page: recordJsonSchema } };
+const postEnvelopeJsonSchema = { type: "object", required: ["post"], properties: { post: recordJsonSchema } };
+const siteSettingsEnvelopeJsonSchema = { type: "object", required: ["settings"], properties: { settings: { anyOf: [recordJsonSchema, { type: "null" }] } } };
 const recordPageJsonSchema = { type: "object", required: ["items", "page", "pageSize", "total", "pageCount"], properties: { items: { type: "array", items: recordJsonSchema }, page: { type: "integer" }, pageSize: { type: "integer" }, total: { type: "integer" }, pageCount: { type: "integer" } } };
 const recordListJsonSchema = { type: "object", properties: { page: { type: "integer", minimum: 1 }, pageSize: { type: "integer", minimum: 1, maximum: 100 }, status: { type: "string", enum: ["DRAFT", "ACTIVE", "ARCHIVED"] } } };
 const publicRecordListJsonSchema = { type: "object", properties: { page: { type: "integer", minimum: 1 }, pageSize: { type: "integer", minimum: 1, maximum: 100 } } };

@@ -58,6 +58,52 @@ describe("SchemaService", () => {
 
     await expect(service.upsertExtension("catalog.product", "Product", "product-1", {}, { actorUserId: "admin" })).rejects.toMatchObject({ code: "SCHEMA_REQUIRED_FIELD" });
   });
+  it("reads an active public record by a string field", async () => {
+    const pageSchema = schema({
+      id: "site-page-schema",
+      key: "site-page",
+      displayName: "Page",
+      pluralName: "Pages",
+      kind: "COLLECTION",
+      publicRead: true,
+      system: true,
+      fields: [{
+        id: "slug-field",
+        schemaId: "site-page-schema",
+        key: "slug",
+        label: "Slug",
+        type: "UID",
+        required: true,
+        repeatable: false,
+        position: 10,
+        validation: null,
+        settings: { targetField: "title" },
+        relationTargetSchemaId: null,
+        createdAt: now,
+        updatedAt: now,
+      }],
+    });
+    const record = {
+      id: "page-1",
+      schemaId: pageSchema.id,
+      schemaKey: pageSchema.key,
+      status: "ACTIVE" as const,
+      values: { slug: "about", title: "About" },
+      createdById: null,
+      updatedById: null,
+      createdAt: now,
+      updatedAt: now,
+    };
+    const findRecordByStringValue = vi.fn().mockResolvedValue(record);
+    const service = new SchemaService(repository({
+      getSchemaByKey: () => Promise.resolve(pageSchema),
+      findRecordByStringValue,
+    }));
+
+    await expect(service.getRecordByStringValue("site-page", "slug", "about", true)).resolves.toEqual(record);
+    expect(findRecordByStringValue).toHaveBeenCalledWith(pageSchema.id, "slug", "about", "ACTIVE");
+  });
+
 });
 
 describe("SchemaService platform-builder fields", () => {
